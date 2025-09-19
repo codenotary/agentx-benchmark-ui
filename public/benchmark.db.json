@@ -1,7 +1,11 @@
 {
-  "filename": "benchmark.db",
-  "filesize": 491520,
-  "chunkSize": 4096,
-  "totalChunks": 120,
-  "lastModified": "2025-09-19T14:42:33.158Z"
+  "serverMode": "chunked",
+  "requestChunkSize": 4096,
+  "databaseLengthBytes": 491520,
+  "serverConfigs": {
+    "./benchmark.db": {
+      "databaseLengthBytes": 491520,
+      "requestChunkSize": 4096
+    }
+  }
 }

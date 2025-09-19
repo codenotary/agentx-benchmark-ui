@@ -15,13 +15,17 @@ const chunkSize = 4096; // 4KB chunks for better HTTP caching
 const dbBuffer = fs.readFileSync(dbPath);
 const fileSize = dbBuffer.length;
 
-// Create metadata file
+// Create metadata file for sql.js-httpvfs jsonconfig format
 const metadata = {
-  filename: 'benchmark.db',
-  filesize: fileSize,
-  chunkSize: chunkSize,
-  totalChunks: Math.ceil(fileSize / chunkSize),
-  lastModified: new Date().toISOString()
+  serverMode: 'chunked',
+  requestChunkSize: chunkSize,
+  databaseLengthBytes: fileSize,
+  serverConfigs: {
+    './benchmark.db': {
+      databaseLengthBytes: fileSize,
+      requestChunkSize: chunkSize
+    }
+  }
 };
 
 // Write metadata
@@ -36,7 +40,7 @@ const tsConfig = `// This file is auto-generated during build
 export const DATABASE_CONFIG = {
   fileSize: ${fileSize},
   chunkSize: ${chunkSize},
-  lastUpdated: '${metadata.lastModified}'
+  lastUpdated: '${new Date().toISOString()}'
 };`;
 
 fs.writeFileSync(
@@ -46,6 +50,5 @@ fs.writeFileSync(
 
 console.log(`Database size: ${fileSize} bytes`);
 console.log(`Chunk size: ${chunkSize} bytes`);
-console.log(`Total chunks: ${metadata.totalChunks}`);
 console.log(`Metadata written to benchmark.db.json`);
 console.log(`TypeScript config written to database-config.ts`);

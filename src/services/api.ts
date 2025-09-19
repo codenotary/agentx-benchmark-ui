@@ -25,11 +25,11 @@ console.log('API_BASE:', API_BASE);
 console.log('Current hostname:', window.location.hostname);
 
 // Configuration flags
-const USE_MOCK_DATA = false;
-// Only use static SQLite when explicitly set or on production GitHub Pages
-const USE_STATIC_SQLITE = import.meta.env.VITE_USE_STATIC_SQLITE === 'true' || 
-                          (window.location.protocol === 'https:' && 
-                           window.location.hostname.includes('github.io'));
+// Use mock data on GitHub Pages due to SQLite/compression issues
+const USE_MOCK_DATA = window.location.hostname.includes('github.io');
+// Only use static SQLite when explicitly set AND not on GitHub Pages
+const USE_STATIC_SQLITE = import.meta.env.VITE_USE_STATIC_SQLITE === 'true' && 
+                          !window.location.hostname.includes('github.io');
 
 console.log('USE_STATIC_SQLITE:', USE_STATIC_SQLITE);
 

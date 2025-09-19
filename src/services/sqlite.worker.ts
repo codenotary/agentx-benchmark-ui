@@ -17,26 +17,33 @@ const sqliteWorker = {
       import.meta.url
     );
 
-    // Configure with file size from build-time config
-    const dbConfig = {
-      from: 'inline',
-      config: {
-        serverMode: 'full',
-        url: dbUrl,
-        requestChunkSize: DATABASE_CONFIG.chunkSize,
-        // Use the actual uncompressed size from build-time
-        fileId: 1,
-        databaseLengthBytes: DATABASE_CONFIG.fileSize,
+    // Use a hybrid approach: try to configure with the known file size
+    // This format should work better with sql.js-httpvfs
+    const configs = [
+      {
+        from: 'inline',
+        config: {
+          serverMode: 'chunked',
+          url: dbUrl,
+          requestChunkSize: DATABASE_CONFIG.chunkSize,
+        }
       }
-    };
+    ];
 
+    // Create the worker with proper configuration for compressed files
     dbWorker = await createDbWorker(
-      [dbConfig],
+      configs,
       workerUrl.toString(),
       wasmUrl.toString(),
       {
-        // Additional options to handle the compressed responses
         maxBytesToRead: 10 * 1024 * 1024, // 10MB max
+        // Pass the database length in the main config
+        serverConfigs: {
+          [dbUrl]: {
+            databaseLengthBytes: DATABASE_CONFIG.fileSize,
+            requestChunkSize: DATABASE_CONFIG.chunkSize
+          }
+        }
       }
     );
     
