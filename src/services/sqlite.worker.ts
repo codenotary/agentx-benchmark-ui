@@ -1,5 +1,6 @@
 import * as Comlink from 'comlink';
 import { createDbWorker, WorkerHttpvfs } from 'sql.js-httpvfs';
+import { DATABASE_CONFIG } from './database-config';
 
 let dbWorker: WorkerHttpvfs | null = null;
 
@@ -16,16 +17,16 @@ const sqliteWorker = {
       import.meta.url
     );
 
-    // Configure with explicit file size to handle GitHub Pages compression
+    // Configure with file size from build-time config
     const dbConfig = {
       from: 'inline',
       config: {
         serverMode: 'full',
         url: dbUrl,
-        requestChunkSize: 4096,
-        // The actual uncompressed size of benchmark.db
+        requestChunkSize: DATABASE_CONFIG.chunkSize,
+        // Use the actual uncompressed size from build-time
         fileId: 1,
-        databaseLengthBytes: 491520,
+        databaseLengthBytes: DATABASE_CONFIG.fileSize,
       }
     };
 

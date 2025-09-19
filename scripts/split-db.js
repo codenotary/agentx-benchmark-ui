@@ -30,7 +30,22 @@ fs.writeFileSync(
   JSON.stringify(metadata, null, 2)
 );
 
+// Also write TypeScript config for the application
+const tsConfig = `// This file is auto-generated during build
+// DO NOT EDIT MANUALLY - it will be overwritten
+export const DATABASE_CONFIG = {
+  fileSize: ${fileSize},
+  chunkSize: ${chunkSize},
+  lastUpdated: '${metadata.lastModified}'
+};`;
+
+fs.writeFileSync(
+  path.join(__dirname, '../src/services/database-config.ts'),
+  tsConfig
+);
+
 console.log(`Database size: ${fileSize} bytes`);
 console.log(`Chunk size: ${chunkSize} bytes`);
 console.log(`Total chunks: ${metadata.totalChunks}`);
 console.log(`Metadata written to benchmark.db.json`);
+console.log(`TypeScript config written to database-config.ts`);
