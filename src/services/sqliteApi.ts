@@ -30,10 +30,10 @@ async function initDatabase() {
   // Wrap with Comlink
   sqliteApi = Comlink.wrap<SqliteWorker>(worker);
   
-  // Initialize with database URL
+  // Initialize with the base URL for the database files
   const base = import.meta.env.BASE_URL || '/';
-  const dbUrl = `${window.location.origin}${base}benchmark.db`;
-  await sqliteApi.init(dbUrl);
+  const baseUrl = `${window.location.origin}${base}`;
+  await sqliteApi.init(baseUrl);
   
   initialized = true;
   return sqliteApi;

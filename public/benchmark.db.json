@@ -1,11 +1,6 @@
 {
   "serverMode": "chunked",
   "requestChunkSize": 4096,
-  "databaseLengthBytes": 491520,
-  "serverConfigs": {
-    "./benchmark.db": {
-      "databaseLengthBytes": 491520,
-      "requestChunkSize": 4096
-    }
-  }
+  "url": "benchmark.db",
+  "databaseLengthBytes": 491520
 }

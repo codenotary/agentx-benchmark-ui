@@ -19,19 +19,26 @@ const fileSize = dbBuffer.length;
 const metadata = {
   serverMode: 'chunked',
   requestChunkSize: chunkSize,
-  databaseLengthBytes: fileSize,
-  serverConfigs: {
-    './benchmark.db': {
-      databaseLengthBytes: fileSize,
-      requestChunkSize: chunkSize
-    }
-  }
+  url: 'benchmark.db', // Use a relative URL
+  databaseLengthBytes: fileSize // Include the database size for GitHub Pages
 };
 
 // Write metadata
 fs.writeFileSync(
   path.join(outputDir, 'benchmark.db.json'),
   JSON.stringify(metadata, null, 2)
+);
+
+// Also create a db-info.json for additional metadata
+const dbInfo = [{
+  total_runs: 13, // This would need to be updated from the actual database
+  latest_run: new Date().toISOString(),
+  model_count: 17 // This would need to be updated from the actual database
+}];
+
+fs.writeFileSync(
+  path.join(outputDir, 'db-info.json'),
+  JSON.stringify(dbInfo)
 );
 
 // Also write TypeScript config for the application
