@@ -32,7 +32,8 @@ fi
 
 # Get file size
 SIZE=$(ls -lh public/benchmark.db | awk '{print $5}')
-echo "Database updated: public/benchmark.db (${SIZE})"
+DB_SIZE=$SIZE
+echo "Database updated: public/benchmark.db (${DB_SIZE})"
 
 # Generate metadata
 if command -v sqlite3 &> /dev/null; then
@@ -46,5 +47,8 @@ FROM benchmark_runs;
 SQL
     echo "Database metadata generated: public/db-info.json"
 fi
+
+# Generate metadata for HTTP VFS
+node scripts/split-db.js
 
 echo "Ready for deployment!"

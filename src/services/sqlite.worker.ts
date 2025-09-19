@@ -7,6 +7,21 @@ const sqliteWorker = {
   async init(dbUrl: string) {
     if (dbWorker) return;
     
+    // First fetch the metadata to get the file size
+    const metadataUrl = dbUrl + '.json';
+    let fileSize = 491520; // Default fallback size
+    
+    try {
+      const metadataResponse = await fetch(metadataUrl);
+      if (metadataResponse.ok) {
+        const metadata = await metadataResponse.json();
+        fileSize = metadata.filesize;
+        console.log('Database metadata loaded, size:', fileSize);
+      }
+    } catch (e) {
+      console.warn('Could not load database metadata, using default size');
+    }
+    
     const workerUrl = new URL(
       'sql.js-httpvfs/dist/sqlite.worker.js',
       import.meta.url
@@ -24,6 +39,8 @@ const sqliteWorker = {
             serverMode: 'full',
             url: dbUrl,
             requestChunkSize: 4096,
+            fileId: 'benchmark-db',
+            totalBytes: fileSize, // Provide the file size explicitly
           }
         }
       ],
