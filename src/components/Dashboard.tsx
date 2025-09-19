@@ -26,6 +26,8 @@ import PromptSummary from './PromptSummary';
 
 export default function Dashboard() {
   const [isTestResultsExpanded, setIsTestResultsExpanded] = useState(false);
+  const [isPromptsExpanded, setIsPromptsExpanded] = useState(true);
+  const [isModelComparisonExpanded, setIsModelComparisonExpanded] = useState(true);
   const { data: runs, isLoading: runsLoading } = useQuery({
     queryKey: ['benchmarkRuns'],
     queryFn: fetchBenchmarkRuns,
@@ -153,14 +155,28 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* Model Comparison Table */}
+        {/* Model Comparison Table - Collapsible */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-8">
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Model Performance Comparison
-            </h2>
+          <div 
+            className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+            onClick={() => setIsModelComparisonExpanded(!isModelComparisonExpanded)}
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Model Performance Comparison
+              </h2>
+              <button className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors">
+                {isModelComparisonExpanded ? (
+                  <ChevronUp className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                ) : (
+                  <ChevronDown className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                )}
+              </button>
+            </div>
           </div>
-          <ModelComparisonTable performance={performance || []} />
+          {isModelComparisonExpanded && (
+            <ModelComparisonTable performance={performance || []} />
+          )}
         </div>
 
         {/* Category Breakdown and Recent Runs */}
@@ -169,17 +185,31 @@ export default function Dashboard() {
           <RecentRuns runs={runs || []} />
         </div>
 
-        {/* Prompt Summary */}
+        {/* Prompt Summary - Collapsible */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-8">
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center">
-              <FileText className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-2" />
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Test Prompts Overview
-              </h2>
+          <div 
+            className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+            onClick={() => setIsPromptsExpanded(!isPromptsExpanded)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <FileText className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-2" />
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Test Prompts Overview
+                </h2>
+              </div>
+              <button className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors">
+                {isPromptsExpanded ? (
+                  <ChevronUp className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                ) : (
+                  <ChevronDown className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                )}
+              </button>
             </div>
           </div>
-          <PromptSummary runId={latestRun?.run_id} />
+          {isPromptsExpanded && (
+            <PromptSummary runId={latestRun?.run_id} />
+          )}
         </div>
 
         {/* Detailed Test Results - Collapsible */}
