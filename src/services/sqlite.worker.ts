@@ -34,8 +34,15 @@ const sqliteWorker = {
       
       console.log('Fetching database from:', dbUrl);
       
-      // Check if database already exists in IndexedDB
-      const exists = SQL.FS.analyzePath(dbPath).exists;
+      // Check if database already exists by trying to read it
+      let exists = false;
+      try {
+        const stats = SQL.FS.stat(dbPath);
+        exists = stats.size > 0;
+      } catch (e) {
+        // File doesn't exist
+        exists = false;
+      }
       
       if (!exists) {
         // Download the database file
@@ -109,7 +116,7 @@ const sqliteWorker = {
       db = null;
     }
     if (sqlFS) {
-      sqlFS.close();
+      // Note: SQLiteFS doesn't have a close method
       sqlFS = null;
     }
   }
