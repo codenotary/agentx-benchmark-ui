@@ -51,4 +51,8 @@ fi
 # Generate metadata for HTTP VFS
 node scripts/split-db.js
 
+# Convert database to JSON for static serving
+echo "Converting database to JSON..."
+node scripts/db-to-json.js
+
 echo "Ready for deployment!"

@@ -6,14 +6,15 @@ import type {
   CategoryPerformance
 } from '../types/benchmark';
 
-// Import static SQLite functions
+// Import static JSON functions
 import {
   fetchBenchmarkRunsStatic,
   fetchModelPerformanceStatic,
   fetchTestResultsStatic,
   fetchPerformanceTrendsStatic,
   fetchCategoryPerformanceStatic,
-} from './sqliteApi';
+  fetchStatsStatic
+} from './jsonApi';
 
 // Use the current hostname when accessing remotely
 const API_BASE = import.meta.env.VITE_API_URL || 
@@ -26,23 +27,23 @@ console.log('Current hostname:', window.location.hostname);
 
 // Configuration flags
 const USE_MOCK_DATA = false;
-// Use static SQLite when explicitly set or on production GitHub Pages
-const USE_STATIC_SQLITE = import.meta.env.VITE_USE_STATIC_SQLITE === 'true' || 
-                          (window.location.protocol === 'https:' && 
-                           window.location.hostname.includes('github.io'));
+// Use static JSON when explicitly set or on production GitHub Pages
+const USE_STATIC_JSON = import.meta.env.VITE_USE_STATIC_SQLITE === 'true' || 
+                        (window.location.protocol === 'https:' && 
+                         window.location.hostname.includes('github.io'));
 
-console.log('USE_STATIC_SQLITE:', USE_STATIC_SQLITE);
+console.log('USE_STATIC_JSON:', USE_STATIC_JSON);
 
 export async function fetchBenchmarkRuns(): Promise<BenchmarkRun[]> {
   if (USE_MOCK_DATA) {
     return generateMockRuns();
   }
   
-  if (USE_STATIC_SQLITE) {
+  if (USE_STATIC_JSON) {
     try {
       return await fetchBenchmarkRunsStatic();
     } catch (error) {
-      console.error('Failed to fetch from static SQLite, falling back to API:', error);
+      console.error('Failed to fetch from static JSON, falling back to API:', error);
       // Fall through to API if static fails
     }
   }
@@ -67,11 +68,11 @@ export async function fetchModelPerformance(runId?: string): Promise<ModelPerfor
     return generateMockModelPerformance();
   }
   
-  if (USE_STATIC_SQLITE) {
+  if (USE_STATIC_JSON) {
     try {
       return await fetchModelPerformanceStatic(runId);
     } catch (error) {
-      console.error('Failed to fetch from static SQLite, falling back to API:', error);
+      console.error('Failed to fetch from static JSON, falling back to API:', error);
     }
   }
   
@@ -87,11 +88,11 @@ export async function fetchTestResults(runId: string): Promise<TestResult[]> {
     return generateMockTestResults();
   }
   
-  if (USE_STATIC_SQLITE) {
+  if (USE_STATIC_JSON) {
     try {
       return await fetchTestResultsStatic(runId);
     } catch (error) {
-      console.error('Failed to fetch from static SQLite, falling back to API:', error);
+      console.error('Failed to fetch from static JSON, falling back to API:', error);
     }
   }
   
@@ -104,11 +105,11 @@ export async function fetchPerformanceTrends(): Promise<PerformanceTrend[]> {
     return generateMockTrends();
   }
   
-  if (USE_STATIC_SQLITE) {
+  if (USE_STATIC_JSON) {
     try {
       return await fetchPerformanceTrendsStatic();
     } catch (error) {
-      console.error('Failed to fetch from static SQLite, falling back to API:', error);
+      console.error('Failed to fetch from static JSON, falling back to API:', error);
     }
   }
   
@@ -121,11 +122,11 @@ export async function fetchCategoryPerformance(runId?: string): Promise<Category
     return generateMockCategoryPerformance();
   }
   
-  if (USE_STATIC_SQLITE) {
+  if (USE_STATIC_JSON) {
     try {
       return await fetchCategoryPerformanceStatic(runId);
     } catch (error) {
-      console.error('Failed to fetch from static SQLite, falling back to API:', error);
+      console.error('Failed to fetch from static JSON, falling back to API:', error);
     }
   }
   
