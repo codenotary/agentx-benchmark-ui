@@ -1,5 +1,6 @@
 import * as Comlink from 'comlink';
 import { createDbWorker, WorkerHttpvfs } from 'sql.js-httpvfs';
+import { DATABASE_CONFIG } from './database-config';
 
 let dbWorker: WorkerHttpvfs | null = null;
 
@@ -16,20 +17,29 @@ const sqliteWorker = {
       import.meta.url
     );
 
-    // The URL for the configuration file
-    const configUrl = `${baseUrl}benchmark.db.json`;
+    // Construct the database URL
+    const dbUrl = `${baseUrl}benchmark.db`;
+    console.log('SQLite Worker - Database URL:', dbUrl);
+    console.log('SQLite Worker - Database size:', DATABASE_CONFIG.fileSize);
 
+    // Use inline configuration with explicit database size
     const configs = [{
-      from: 'jsonconfig',
+      from: 'inline',
       config: {
-        url: configUrl
+        serverMode: 'chunked' as const,
+        url: dbUrl,
+        requestChunkSize: DATABASE_CONFIG.chunkSize,
+        databaseLengthBytes: DATABASE_CONFIG.fileSize
       }
     }];
 
     dbWorker = await createDbWorker(
       configs,
       workerUrl.toString(),
-      wasmUrl.toString()
+      wasmUrl.toString(),
+      {
+        maxBytesToRead: 10 * 1024 * 1024 // 10MB max
+      }
     );
     
     return true;

@@ -33,6 +33,7 @@ async function initDatabase() {
   // Initialize with the base URL for the database files
   const base = import.meta.env.BASE_URL || '/';
   const baseUrl = `${window.location.origin}${base}`;
+  console.log('SQLite API - Initializing with base URL:', baseUrl);
   await sqliteApi.init(baseUrl);
   
   initialized = true;

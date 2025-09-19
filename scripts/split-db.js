@@ -19,7 +19,7 @@ const fileSize = dbBuffer.length;
 const metadata = {
   serverMode: 'chunked',
   requestChunkSize: chunkSize,
-  url: 'benchmark.db', // Use a relative URL
+  url: 'benchmark.db', // Simple filename - resolved relative to JSON location
   databaseLengthBytes: fileSize // Include the database size for GitHub Pages
 };
 
