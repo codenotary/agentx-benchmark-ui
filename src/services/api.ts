@@ -19,7 +19,7 @@ import {
 const API_BASE = import.meta.env.VITE_API_URL || 
   (window.location.hostname === 'localhost' 
     ? 'http://localhost:3001/api'
-    : `http://${window.location.hostname}:3001/api`);
+    : `${window.location.protocol}//${window.location.hostname}:3001/api`);
 
 console.log('API_BASE:', API_BASE);
 console.log('Current hostname:', window.location.hostname);

@@ -22,10 +22,12 @@ export default function TestResultsTable({ runId }: TestResultsTableProps) {
   const fetchTestResults = async () => {
     try {
       setLoading(true);
+      const protocol = window.location.hostname === 'localhost' ? 'http' : window.location.protocol;
+      const hostname = window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname;
       const response = await fetch(
         runId 
-          ? `http://${window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname}:3001/api/benchmark/results/${runId}`
-          : `http://${window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname}:3001/api/benchmark/results/latest`
+          ? `${protocol}//${hostname}:3001/api/benchmark/results/${runId}`
+          : `${protocol}//${hostname}:3001/api/benchmark/results/latest`
       );
       
       if (!response.ok) throw new Error('Failed to fetch test results');
