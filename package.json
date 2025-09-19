@@ -17,12 +17,11 @@
     "start": "concurrently \"npm run server\" \"npm run dev\"",
     "update-db": "bash scripts/update-db.sh",
     "build": "tsc -b && vite build",
-    "build:static": "npm run update-db && VITE_USE_STATIC_SQLITE=true npm run build",
+    "build:static": "npm run update-db && VITE_USE_STATIC_SQLITE=true vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "predeploy": "npm run build:static",
     "deploy": "gh-pages -d dist"
-  },
   },
   "dependencies": {
     "@tanstack/react-query": "^5.89.0",
