@@ -35,8 +35,10 @@ async function initJsonicDatabase(): Promise<JsonicDB> {
       console.log('🚀 Initializing JSONIC database...');
       
       // Dynamic import of JSONIC WASM module from public directory
-      console.log('📦 Loading JSONIC module from /jsonic/jsonic_wasm.js...');
-      const module = await import('/jsonic/jsonic_wasm.js');
+      // Use a dynamic string to prevent Vite from trying to resolve at build time
+      const modulePath = '/jsonic/jsonic_wasm.js';
+      console.log('📦 Loading JSONIC module from', modulePath, '...');
+      const module = await import(/* @vite-ignore */ modulePath);
       console.log('✅ JSONIC module loaded');
       
       // Initialize the WASM module with the correct path
