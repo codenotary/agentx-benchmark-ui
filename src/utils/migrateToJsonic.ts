@@ -4,8 +4,10 @@ export async function performMigration() {
   try {
     console.log('Starting data migration to JSONIC...');
     
-    // Fetch the existing JSON data
-    const response = await fetch('/data/database.json');
+    // Fetch the existing JSON data - use full path for GitHub Pages
+    const basePath = import.meta.env.BASE_URL || '/';
+    const dataUrl = `${basePath}data/database.json`;
+    const response = await fetch(dataUrl);
     if (!response.ok) {
       throw new Error(`Failed to fetch database.json: ${response.status}`);
     }
