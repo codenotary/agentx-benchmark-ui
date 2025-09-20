@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSONIC Test</title>
+</head>
+<body>
+    <h1>JSONIC Database Test</h1>
+    <div id="status">Loading...</div>
+    <pre id="log"></pre>
+    
+    <script type="module">
+        const log = (msg) => {
+            const logEl = document.getElementById('log');
+            logEl.textContent += msg + '\n';
+            console.log(msg);
+        };
+        
+        const setStatus = (msg) => {
+            document.getElementById('status').textContent = msg;
+        };
+        
+        async function testJsonic() {
+            try {
+                log('Starting JSONIC test...');
+                
+                // Import JSONIC module
+                log('Importing JSONIC module...');
+                const module = await import('/jsonic/jsonic_wasm.js');
+                log('Module imported successfully');
+                
+                // Initialize WASM
+                log('Initializing WASM...');
+                await module.default('/jsonic/jsonic_wasm_bg.wasm');
+                log('WASM initialized successfully');
+                
+                // Create database instance
+                log('Creating database instance...');
+                const db = new module.JsonDB();
+                log('Database created successfully');
+                
+                // Test insert
+                log('\nTesting insert operation...');
+                const testDoc = {
+                    name: "Test Document",
+                    timestamp: new Date().toISOString(),
+                    data: { value: 42 }
+                };
+                const result = db.insert(JSON.stringify(testDoc));
+                log('Insert result: ' + JSON.stringify(result));
+                
+                if (result.success) {
+                    const docId = result.data;
+                    log('Document ID: ' + docId);
+                    
+                    // Test get
+                    log('\nTesting get operation...');
+                    const getResult = db.get(docId);
+                    log('Get result: ' + JSON.stringify(getResult));
+                    
+                    // Test list
+                    log('\nTesting list operation...');
+                    const listResult = db.list_ids();
+                    log('List result: ' + JSON.stringify(listResult));
+                    
+                    // Test stats
+                    log('\nTesting stats operation...');
+                    const statsResult = db.stats();
+                    log('Stats result: ' + JSON.stringify(statsResult));
+                }
+                
+                setStatus('✅ JSONIC test completed successfully!');
+                
+            } catch (error) {
+                log('Error: ' + error.message);
+                console.error(error);
+                setStatus('❌ JSONIC test failed');
+            }
+        }
+        
+        testJsonic();
+    </script>
+</body>
+</html>

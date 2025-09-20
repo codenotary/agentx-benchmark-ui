@@ -28,9 +28,12 @@ const API_BASE = import.meta.env.VITE_API_URL ||
     ? 'http://localhost:3001/api'
     : `${window.location.protocol}//${window.location.hostname}:3001/api`);
 
+console.log('=== Database Configuration ===');
 console.log('API_BASE:', API_BASE);
 console.log('Current hostname:', window.location.hostname);
 console.log('Database mode:', DB_CONFIG.mode);
+console.log('Using JSONIC:', FEATURES.useJsonic);
+console.log('==============================');
 
 export async function fetchBenchmarkRuns(): Promise<BenchmarkRun[]> {
   try {

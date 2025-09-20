@@ -32,18 +32,23 @@ async function initJsonicDatabase(): Promise<JsonicDB> {
   
   initPromise = (async () => {
     try {
-      // Dynamic import of JSONIC WASM module
-      // This would need to be properly configured for production
-      // For now, this is a placeholder that will fail gracefully
-      const jsonic = await (window as any).loadJsonicWasm?.() || 
-        await Promise.reject(new Error('JSONIC not available'));
+      console.log('🚀 Initializing JSONIC database...');
       
-      await jsonic.default();
+      // Dynamic import of JSONIC WASM module from public directory
+      console.log('📦 Loading JSONIC module from /jsonic/jsonic_wasm.js...');
+      const module = await import('/jsonic/jsonic_wasm.js');
+      console.log('✅ JSONIC module loaded');
+      
+      // Initialize the WASM module with the correct path
+      console.log('🔧 Initializing WASM from /jsonic/jsonic_wasm_bg.wasm...');
+      await module.default('/jsonic/jsonic_wasm_bg.wasm');
+      console.log('✅ WASM initialized');
       
       // Create new database instance
-      db = new jsonic.JsonDB();
+      console.log('💾 Creating database instance...');
+      db = new (module as any).JsonDB();
       
-      console.log('JSONIC database initialized successfully');
+      console.log('✅ JSONIC database initialized successfully');
       return db;
     } catch (error) {
       console.error('Failed to initialize JSONIC database:', error);
