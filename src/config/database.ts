@@ -1,7 +1,9 @@
 // Database configuration
 export const DB_CONFIG = {
   // Set to 'jsonic' to use the JSONIC database, 'json' to use static JSON files
-  mode: 'jsonic' as 'jsonic' | 'json',
+  // Note: Currently set to 'json' for GitHub Pages compatibility
+  // Change to 'jsonic' once JSONIC WASM module is properly bundled
+  mode: 'json' as 'jsonic' | 'json',
   
   // JSONIC configuration
   jsonic: {

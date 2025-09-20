@@ -17,11 +17,13 @@ interface JsonicDB {
 }
 
 let db: JsonicDB | null = null;
-let initPromise: Promise<JsonicDB> | null = null;
+let initPromise: Promise<JsonicDB | null> | null = null;
 
 async function initJsonicDatabase(): Promise<JsonicDB> {
   if (initPromise) {
-    return initPromise;
+    const result = await initPromise;
+    if (result) return result;
+    throw new Error('Database initialization failed');
   }
   
   if (db) {
@@ -31,7 +33,11 @@ async function initJsonicDatabase(): Promise<JsonicDB> {
   initPromise = (async () => {
     try {
       // Dynamic import of JSONIC WASM module
-      const jsonic = await import('/home/dennis/github/jsonic/pkg/jsonic_wasm.js');
+      // This would need to be properly configured for production
+      // For now, this is a placeholder that will fail gracefully
+      const jsonic = await (window as any).loadJsonicWasm?.() || 
+        await Promise.reject(new Error('JSONIC not available'));
+      
       await jsonic.default();
       
       // Create new database instance
@@ -43,11 +49,14 @@ async function initJsonicDatabase(): Promise<JsonicDB> {
       console.error('Failed to initialize JSONIC database:', error);
       db = null;
       initPromise = null;
-      throw error;
+      // Return null instead of throwing to allow graceful fallback
+      return null;
     }
   })();
   
-  return initPromise;
+  const result = await initPromise;
+  if (result) return result;
+  throw new Error('Failed to initialize JSONIC database');
 }
 
 // Helper to store data with type tagging
@@ -226,7 +235,7 @@ export async function fetchPerformanceTrendsJsonic(): Promise<PerformanceTrend[]
 }
 
 export async function fetchCategoryPerformanceJsonic(runId?: string): Promise<CategoryPerformance[]> {
-  const jsonicDb = await initJsonicDatabase();
+  await initJsonicDatabase();
   
   // Get test results for the run
   let targetRunId = runId;
@@ -257,19 +266,20 @@ export async function fetchCategoryPerformanceJsonic(runId?: string): Promise<Ca
         model: test.model,
         avg_ttft_ms: 0,
         avg_total_time_ms: 0,
-        test_count: 0,
+        total_tests: 0,
         success_rate: 0,
         _ttft_sum: 0,
         _total_time_sum: 0,
-        _success_count: 0
+        _success_count: 0,
+        _test_count: 0
       } as any);
     }
     
     const perf = categoryMap.get(key) as any;
-    perf.test_count++;
+    perf._test_count++;
     perf._ttft_sum += test.time_to_first_token_ms || 0;
     perf._total_time_sum += test.total_time_ms || 0;
-    if (test.passed) perf._success_count++;
+    if (test.success) perf._success_count++;
   });
   
   // Calculate averages
@@ -280,10 +290,10 @@ export async function fetchCategoryPerformanceJsonic(runId?: string): Promise<Ca
       category: p.category,
       provider: p.provider,
       model: p.model,
-      avg_ttft_ms: p.test_count > 0 ? p._ttft_sum / p.test_count : 0,
-      avg_total_time_ms: p.test_count > 0 ? p._total_time_sum / p.test_count : 0,
-      test_count: p.test_count,
-      success_rate: p.test_count > 0 ? (p._success_count / p.test_count) * 100 : 0
+      avg_ttft_ms: p._test_count > 0 ? p._ttft_sum / p._test_count : 0,
+      avg_total_time_ms: p._test_count > 0 ? p._total_time_sum / p._test_count : 0,
+      total_tests: p._test_count,
+      success_rate: p._test_count > 0 ? (p._success_count / p._test_count) * 100 : 0
     });
   });
   
