@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>JSONIC Debug Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        button { margin: 5px; padding: 10px; cursor: pointer; }
+        #output { white-space: pre-wrap; margin-top: 20px; background: #f0f0f0; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>JSONIC Debug Test</h1>
+    <button onclick="runTest()">Run Test</button>
+    <button onclick="clearOutput()">Clear Output</button>
+    <div id="output"></div>
+
+    <script type="module">
+        import { configure, initialize, insert, list, get, query } from '/jsonic-wrapper.esm.js';
+        
+        window.log = function(msg) {
+            const output = document.getElementById('output');
+            output.textContent += msg + '\n';
+            console.log(msg);
+        };
+        
+        window.runTest = async function() {
+            log('=== Starting Debug Test ===');
+            
+            // Configure with debug mode
+            configure({
+                debug: true,
+                enablePersistence: false
+            });
+            
+            // Initialize
+            await initialize();
+            log('✅ JSONIC initialized');
+            
+            // Insert a simple document
+            const doc1 = { _type: 'benchmark_run', name: 'Test Run 1', value: 100 };
+            const id1 = await insert(doc1);
+            log(`✅ Inserted doc1 with ID: ${id1}`);
+            
+            // List all IDs
+            const allIds = await list();
+            log(`📋 All document IDs: ${JSON.stringify(allIds)}`);
+            
+            // Get the document back
+            const retrieved = await get(id1);
+            log(`📄 Retrieved document: ${JSON.stringify(retrieved)}`);
+            
+            // Try a simple query
+            log('\n=== Testing Query ===');
+            const filter = { _type: 'benchmark_run' };
+            log(`Filter: ${JSON.stringify(filter)}`);
+            
+            const results = await query(filter);
+            log(`Query results: ${JSON.stringify(results)}`);
+            log(`Number of results: ${results.length}`);
+            
+            log('\n=== Test Complete ===');
+        };
+        
+        window.clearOutput = function() {
+            document.getElementById('output').textContent = '';
+        };
+    </script>
+</body>
+</html>
