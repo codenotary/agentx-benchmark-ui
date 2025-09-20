@@ -1,14 +1,16 @@
 interface JsonicDatabase {
   insert(data: any): Promise<string>;
   get(id: string): Promise<any>;
-  update(id: string, data: any): Promise<void>;
-  delete(id: string): Promise<void>;
-  list_ids(): Promise<string[]>;
+  update(id: string, data: any): Promise<boolean>;
+  delete(id: string): Promise<boolean>;
+  list(): Promise<string[]>;
   stats(): Promise<any>;
 }
 
 interface JSONIC {
   createDatabase(): Promise<JsonicDatabase>;
+  configure(options: { wasmUrl?: string; debug?: boolean }): void;
+  version: string;
 }
 
 declare global {
@@ -32,47 +34,60 @@ class JsonicService {
     return JsonicService.instance;
   }
   
-  private async loadJsonicScript(): Promise<void> {
+  private async loadJsonic(): Promise<void> {
     if (window.JSONIC) {
       return;
     }
+
+    // Check if already loading via JSONIC_READY promise
+    if (window.JSONIC_READY) {
+      await window.JSONIC_READY;
+      return;
+    }
     
-    if (document.querySelector('script[src*="jsonic.min.js"]')) {
-      const maxAttempts = 100;
-      let attempts = 0;
-      
-      while (attempts < maxAttempts && !window.JSONIC) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        attempts++;
-      }
+    // Check if script is already loaded
+    if (document.querySelector('script[src*="jsonic.esm.js"]')) {
+      // Wait for JSONIC_READY event
+      await new Promise<void>((resolve) => {
+        window.addEventListener('jsonic-ready', () => resolve(), { once: true });
+        // Timeout after 10 seconds
+        setTimeout(() => resolve(), 10000);
+      });
       
       if (!window.JSONIC) {
-        throw new Error('JSONIC failed to load after 10 seconds');
+        throw new Error('JSONIC failed to load');
       }
       return;
     }
     
+    // Load the ES module version
     return new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = import.meta.env.BASE_URL + 'jsonic.min.js';
-      script.async = true;
+      script.type = 'module';
+      script.src = import.meta.env.BASE_URL + 'jsonic.esm.js';
       
-      script.onload = () => {
-        let checkAttempts = 0;
-        const checkInterval = setInterval(() => {
-          if (window.JSONIC) {
-            clearInterval(checkInterval);
-            resolve();
-          } else if (++checkAttempts > 50) {
-            clearInterval(checkInterval);
-            reject(new Error('JSONIC object not available after script load'));
-          }
-        }, 100);
+      // Set up event listener for jsonic-ready event
+      const onReady = () => {
+        window.removeEventListener('jsonic-ready', onReady);
+        resolve();
       };
       
-      script.onerror = () => reject(new Error('Failed to load JSONIC script'));
+      window.addEventListener('jsonic-ready', onReady);
+      
+      script.onerror = () => {
+        window.removeEventListener('jsonic-ready', onReady);
+        reject(new Error('Failed to load JSONIC script'));
+      };
       
       document.head.appendChild(script);
+      
+      // Timeout after 10 seconds
+      setTimeout(() => {
+        if (!window.JSONIC) {
+          window.removeEventListener('jsonic-ready', onReady);
+          reject(new Error('JSONIC load timeout'));
+        }
+      }, 10000);
     });
   }
   
@@ -88,11 +103,19 @@ class JsonicService {
   
   private async performInitialization(): Promise<void> {
     try {
-      await this.loadJsonicScript();
+      await this.loadJsonic();
       
       if (!window.JSONIC) {
         throw new Error('JSONIC not available after loading');
       }
+      
+      // Configure JSONIC to use the correct WASM path
+      window.JSONIC.configure({
+        wasmUrl: import.meta.env.BASE_URL + 'jsonic_wasm_bg.wasm',
+        debug: import.meta.env.DEV
+      });
+      
+      console.log('JSONIC version:', window.JSONIC.version);
       
       this.db = await window.JSONIC.createDatabase();
       console.log('JSONIC database initialized successfully');
@@ -139,7 +162,7 @@ class JsonicService {
   
   async listIds(): Promise<string[]> {
     const db = await this.getDatabase();
-    return db.list_ids();
+    return db.list();
   }
   
   async getStats(): Promise<any> {
