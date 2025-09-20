@@ -1,6 +1,6 @@
 /**
  * JSONIC ES Module Wrapper with MongoDB-like queries and OPFS persistence
- * Version: 1.0.5 - Added detailed debugging for insert/get operations
+ * Version: 1.0.6 - Fixed WASM document structure extraction from {id, content, metadata}
  */
 
 import init, { JsonDB } from './jsonic_wasm.js';
@@ -149,8 +149,12 @@ class JsonicDatabase {
         }
         
         if (parsed.success) {
-            // Return data directly for compatibility with queries
-            return parsed.data;
+            // WASM returns {id, content, metadata} - extract the content
+            const data = parsed.data;
+            if (data && data.content) {
+                return data.content;
+            }
+            return data;
         }
         return null;
     }
