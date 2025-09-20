@@ -34,31 +34,20 @@ export async function performMigration() {
 // Auto-migration on first load
 export async function checkAndMigrate() {
   try {
-    console.log('🔍 Checking JSONIC migration status...');
+    console.log('🔍 Loading data into JSONIC...');
     
-    // Check if migration is needed (check localStorage flag)
-    const migrationKey = 'jsonic_migration_completed';
-    const migrationCompleted = localStorage.getItem(migrationKey);
-    
-    if (migrationCompleted === 'true') {
-      const migrationDate = localStorage.getItem('jsonic_migration_date');
-      console.log('✅ JSONIC migration already completed on:', migrationDate);
-      return false;
-    }
-    
-    console.log('📥 JSONIC migration not found, starting migration...');
+    // Always perform migration since JSONIC is in-memory only
+    // The data doesn't persist between page loads
+    console.log('📥 Loading data from JSON files...');
     const success = await performMigration();
     
     if (success) {
-      // Mark migration as complete
-      localStorage.setItem(migrationKey, 'true');
-      localStorage.setItem('jsonic_migration_date', new Date().toISOString());
-      console.log('Migration marked as complete');
+      console.log('✅ Data loaded successfully into JSONIC');
     }
     
     return success;
   } catch (error) {
-    console.error('Auto-migration check failed:', error);
+    console.error('Failed to load data into JSONIC:', error);
     return false;
   }
 }

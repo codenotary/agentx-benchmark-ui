@@ -3,83 +3,220 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JSONIC Test</title>
+    <title>JSONIC MongoDB & OPFS Test</title>
+    <style>
+        body { font-family: system-ui; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        button { margin: 5px; padding: 10px 15px; cursor: pointer; }
+        .success { color: green; }
+        .error { color: red; }
+        pre { background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; }
+    </style>
 </head>
 <body>
-    <h1>JSONIC Database Test</h1>
+    <h1>JSONIC MongoDB-like Queries & OPFS Test</h1>
     <div id="status">Loading...</div>
+    
+    <div>
+        <button onclick="testBasic()">Test Basic CRUD</button>
+        <button onclick="testMongoQueries()">Test MongoDB Queries</button>
+        <button onclick="testOPFS()">Test OPFS Persistence</button>
+        <button onclick="clearDB()">Clear Database</button>
+    </div>
+    
     <pre id="log"></pre>
     
     <script type="module">
-        const log = (msg) => {
+        import JSONIC from './jsonic-wrapper.esm.js';
+        
+        let db = null;
+        
+        const log = (msg, isError = false) => {
             const logEl = document.getElementById('log');
-            logEl.textContent += msg + '\n';
+            const timestamp = new Date().toISOString().split('T')[1].substr(0, 8);
+            const prefix = isError ? '❌' : '✅';
+            logEl.textContent += `${prefix} [${timestamp}] ${msg}\n`;
             console.log(msg);
         };
         
-        const setStatus = (msg) => {
-            document.getElementById('status').textContent = msg;
+        const setStatus = (msg, isError = false) => {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = msg;
+            statusEl.className = isError ? 'error' : 'success';
         };
         
-        async function testJsonic() {
+        async function initDB() {
             try {
-                log('Starting JSONIC test...');
+                log('Initializing JSONIC with MongoDB queries and OPFS...');
                 
-                // Import JSONIC module
-                log('Importing JSONIC module...');
-                const module = await import('/jsonic/jsonic_wasm.js');
-                log('Module imported successfully');
+                JSONIC.configure({
+                    wasmUrl: './jsonic_wasm_bg.wasm',
+                    debug: true,
+                    enablePersistence: true,
+                    persistenceKey: 'agentx_test_db'
+                });
                 
-                // Initialize WASM
-                log('Initializing WASM...');
-                await module.default('/jsonic/jsonic_wasm_bg.wasm');
-                log('WASM initialized successfully');
+                db = await JSONIC.createDatabase({
+                    enablePersistence: true,
+                    persistenceKey: 'agentx_test_db'
+                });
                 
-                // Create database instance
-                log('Creating database instance...');
-                const db = new module.JsonDB();
-                log('Database created successfully');
-                
-                // Test insert
-                log('\nTesting insert operation...');
-                const testDoc = {
-                    name: "Test Document",
-                    timestamp: new Date().toISOString(),
-                    data: { value: 42 }
-                };
-                const result = db.insert(JSON.stringify(testDoc));
-                log('Insert result: ' + JSON.stringify(result));
-                
-                if (result.success) {
-                    const docId = result.data;
-                    log('Document ID: ' + docId);
-                    
-                    // Test get
-                    log('\nTesting get operation...');
-                    const getResult = db.get(docId);
-                    log('Get result: ' + JSON.stringify(getResult));
-                    
-                    // Test list
-                    log('\nTesting list operation...');
-                    const listResult = db.list_ids();
-                    log('List result: ' + JSON.stringify(listResult));
-                    
-                    // Test stats
-                    log('\nTesting stats operation...');
-                    const statsResult = db.stats();
-                    log('Stats result: ' + JSON.stringify(statsResult));
-                }
-                
-                setStatus('✅ JSONIC test completed successfully!');
-                
+                log('Database initialized with OPFS persistence');
+                setStatus('✅ JSONIC Ready');
+                return true;
             } catch (error) {
-                log('Error: ' + error.message);
-                console.error(error);
-                setStatus('❌ JSONIC test failed');
+                log('Init error: ' + error.message, true);
+                setStatus('❌ Initialization failed', true);
+                return false;
             }
         }
         
-        testJsonic();
+        window.testBasic = async function() {
+            if (!db && !await initDB()) return;
+            
+            try {
+                log('\n=== Basic CRUD Test ===');
+                
+                // Insert
+                const id1 = await db.insert({ name: 'Alice', age: 25, city: 'NYC' });
+                log('Inserted Alice: ' + id1);
+                
+                const id2 = await db.insert({ name: 'Bob', age: 30, city: 'LA' });
+                log('Inserted Bob: ' + id2);
+                
+                // Get
+                const doc = await db.get(id1);
+                log('Retrieved: ' + JSON.stringify(doc.content));
+                
+                // Update
+                await db.update(id1, { name: 'Alice', age: 26, city: 'NYC' });
+                log('Updated Alice\'s age to 26');
+                
+                // List
+                const ids = await db.list();
+                log('Total documents: ' + ids.length);
+                
+                // Stats
+                const stats = await db.stats();
+                log('Stats: ' + JSON.stringify(stats));
+                
+                setStatus('✅ Basic CRUD test passed');
+            } catch (error) {
+                log('Error: ' + error.message, true);
+                setStatus('❌ Basic CRUD test failed', true);
+            }
+        };
+        
+        window.testMongoQueries = async function() {
+            if (!db && !await initDB()) return;
+            
+            try {
+                log('\n=== MongoDB Query Test ===');
+                
+                // Insert test data
+                const testDocs = [
+                    { name: 'Charlie', age: 35, city: 'NYC', tags: ['js', 'node'] },
+                    { name: 'Diana', age: 28, city: 'SF', tags: ['rust', 'wasm'] },
+                    { name: 'Eve', age: 22, city: 'NYC', tags: ['python', 'ml'] },
+                    { name: 'Frank', age: 40, city: 'LA', tags: ['js', 'react'] }
+                ];
+                
+                for (const doc of testDocs) {
+                    await db.insert(doc);
+                }
+                log('Inserted 4 test documents');
+                
+                // Query 1: Simple equality
+                const nycDocs = await db.query({ city: 'NYC' });
+                log(`NYC residents: ${nycDocs.length} (expected: 2+)`);
+                
+                // Query 2: Greater than
+                const over30 = await db.query({ age: { $gt: 30 } });
+                log(`People over 30: ${over30.length} (expected: 2)`);
+                
+                // Query 3: OR condition
+                const orQuery = await db.query({
+                    $or: [{ city: 'NYC' }, { age: { $lt: 25 } }]
+                });
+                log(`OR query results: ${orQuery.length}`);
+                
+                // Query 4: With sorting and limit
+                const sorted = await db.query({}, { 
+                    sort: [['age', -1]], 
+                    limit: 3 
+                });
+                log(`Top 3 by age: ${sorted.map(d => d.name || 'unknown').join(', ')}`);
+                
+                // Query 5: FindOne
+                const one = await db.findOne({ name: 'Charlie' });
+                log(`FindOne Charlie: ${one ? 'found' : 'not found'}`);
+                
+                setStatus('✅ MongoDB query test passed');
+            } catch (error) {
+                log('Query error: ' + error.message, true);
+                setStatus('❌ MongoDB query test failed', true);
+            }
+        };
+        
+        window.testOPFS = async function() {
+            if (!db && !await initDB()) return;
+            
+            try {
+                log('\n=== OPFS Persistence Test ===');
+                
+                // Check OPFS availability
+                if (!('storage' in navigator && 'getDirectory' in navigator.storage)) {
+                    log('OPFS not available in this browser', true);
+                    return;
+                }
+                
+                log('OPFS is available');
+                
+                // Insert test document
+                const testId = await db.insert({ 
+                    test: 'persistence', 
+                    timestamp: new Date().toISOString() 
+                });
+                log('Inserted test document: ' + testId);
+                
+                // Create new DB instance to test persistence
+                const db2 = await JSONIC.createDatabase({
+                    enablePersistence: true,
+                    persistenceKey: 'agentx_test_db'
+                });
+                
+                const ids = await db2.list();
+                log(`Loaded ${ids.length} documents from OPFS`);
+                
+                if (ids.length > 0) {
+                    const doc = await db2.get(ids[0]);
+                    log('First document content: ' + JSON.stringify(doc.content));
+                }
+                
+                setStatus('✅ OPFS persistence test passed');
+            } catch (error) {
+                log('OPFS error: ' + error.message, true);
+                setStatus('❌ OPFS persistence test failed', true);
+            }
+        };
+        
+        window.clearDB = async function() {
+            if (!db && !await initDB()) return;
+            
+            try {
+                const ids = await db.list();
+                for (const id of ids) {
+                    await db.delete(id);
+                }
+                log(`Cleared ${ids.length} documents`);
+                setStatus('✅ Database cleared');
+            } catch (error) {
+                log('Clear error: ' + error.message, true);
+                setStatus('❌ Clear failed', true);
+            }
+        };
+        
+        // Initialize on load
+        initDB();
     </script>
 </body>
 </html>

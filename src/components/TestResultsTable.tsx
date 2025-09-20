@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp, CheckCircle, XCircle, Clock, Code, FileText, Hash } from 'lucide-react';
 import type { TestResult } from '../types/benchmark';
 import { cn, formatDuration, formatCost, formatTokens } from '../lib/utils';
+import { fetchTestResults } from '../services/api-jsonic';
+import { fetchTestResultsJsonic } from '../services/jsonicApi';
+import { fetchBenchmarkRunsJsonic } from '../services/jsonicApi';
 
 interface TestResultsTableProps {
   runId?: string;
@@ -16,27 +19,36 @@ export default function TestResultsTable({ runId }: TestResultsTableProps) {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
-    fetchTestResults();
+    fetchTestResultsData();
   }, [runId]);
 
-  const fetchTestResults = async () => {
+  const fetchTestResultsData = async () => {
     try {
       setLoading(true);
-      const protocol = window.location.hostname === 'localhost' ? 'http' : window.location.protocol;
-      const hostname = window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname;
-      const response = await fetch(
-        runId 
-          ? `${protocol}//${hostname}:3001/api/benchmark/results/${runId}`
-          : `${protocol}//${hostname}:3001/api/benchmark/results/latest`
-      );
       
-      if (!response.ok) throw new Error('Failed to fetch test results');
+      // Use JSONIC API to fetch test results
+      let data: TestResult[];
+      if (runId) {
+        data = await fetchTestResults(runId);
+      } else {
+        // For latest results, get the most recent benchmark run
+        const runs = await fetchBenchmarkRunsJsonic();
+        if (runs && runs.length > 0) {
+          // Sort runs by timestamp and get the most recent
+          const sortedRuns = runs.sort((a, b) => 
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+          );
+          const latestRunId = sortedRuns[0].run_id;
+          data = await fetchTestResultsJsonic(latestRunId);
+        } else {
+          data = [];
+        }
+      }
       
-      const data = await response.json();
       setTestResults(data);
     } catch (error) {
       console.error('Error fetching test results:', error);
-      // Try to use mock data if real data fails
+      // Try to use mock data if real data fails  
       setTestResults(generateMockTestResults());
     } finally {
       setLoading(false);

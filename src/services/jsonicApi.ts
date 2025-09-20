@@ -34,15 +34,16 @@ export async function storeTestResult(test: TestResult, runId: string): Promise<
 }
 
 export async function fetchBenchmarkRunsJsonic(): Promise<BenchmarkRun[]> {
-  const docs = await jsonicService.query((item: any) => item._type === 'benchmark_run');
+  // Use MongoDB-like query with native sorting
+  const docs = await jsonicService.findDocuments(
+    { _type: 'benchmark_run' },
+    { sort: [['timestamp', -1]] }
+  );
   
   const runs: BenchmarkRun[] = docs.map(doc => {
     const { id, _type, _runId, _timestamp, ...runData } = doc;
     return runData as BenchmarkRun;
   });
-  
-  // Sort by timestamp descending
-  runs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   
   return runs;
 }
@@ -58,8 +59,10 @@ export async function fetchModelPerformanceJsonic(runId?: string): Promise<Model
     }
   }
   
-  const docs = await jsonicService.query((item: any) => 
-    item._type === 'model_performance' && item._runId === latestRunId
+  // Use MongoDB-like query with compound filter and sorting
+  const docs = await jsonicService.findDocuments(
+    { _type: 'model_performance', _runId: latestRunId },
+    { sort: [['provider', 1], ['model', 1]] }
   );
   
   const performances: ModelPerformance[] = docs.map(doc => {
@@ -67,19 +70,14 @@ export async function fetchModelPerformanceJsonic(runId?: string): Promise<Model
     return perfData as ModelPerformance;
   });
   
-  // Sort by provider and model
-  performances.sort((a, b) => {
-    const providerComp = a.provider.localeCompare(b.provider);
-    if (providerComp !== 0) return providerComp;
-    return a.model.localeCompare(b.model);
-  });
-  
   return performances;
 }
 
 export async function fetchTestResultsJsonic(runId: string): Promise<TestResult[]> {
-  const docs = await jsonicService.query((item: any) => 
-    item._type === 'test_result' && item._runId === runId
+  // Use MongoDB-like query with filtering, sorting, and limit
+  const docs = await jsonicService.findDocuments(
+    { _type: 'test_result', _runId: runId },
+    { sort: [['timestamp', -1]], limit: 500 }
   );
   
   const tests: TestResult[] = docs.map(doc => {
@@ -87,32 +85,30 @@ export async function fetchTestResultsJsonic(runId: string): Promise<TestResult[
     return testData as TestResult;
   });
   
-  // Sort by timestamp descending and limit to 500
-  tests.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  
-  return tests.slice(0, 500);
+  return tests;
 }
 
 export async function fetchPerformanceTrendsJsonic(): Promise<PerformanceTrend[]> {
   // Calculate date 7 days ago
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const isoDate = sevenDaysAgo.toISOString();
   
-  const docs = await jsonicService.query((item: any) => {
-    if (item._type !== 'performance_trend') return false;
-    const recordedAt = new Date(item.recorded_at);
-    return recordedAt >= sevenDaysAgo;
-  });
+  // Use MongoDB-like query with $gte operator for date comparison
+  const docs = await jsonicService.findDocuments(
+    { 
+      _type: 'performance_trend',
+      recorded_at: { $gte: isoDate }
+    },
+    { sort: [['recorded_at', -1]], limit: 100 }
+  );
   
   const trends: PerformanceTrend[] = docs.map(doc => {
     const { id, _type, _runId, _timestamp, ...trendData } = doc;
     return trendData as PerformanceTrend;
   });
   
-  // Sort by recorded_at descending and limit to 100
-  trends.sort((a, b) => new Date(b.recorded_at).getTime() - new Date(a.recorded_at).getTime());
-  
-  return trends.slice(0, 100);
+  return trends;
 }
 
 export async function fetchCategoryPerformanceJsonic(runId?: string): Promise<CategoryPerformance[]> {

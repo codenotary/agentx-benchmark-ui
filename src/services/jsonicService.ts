@@ -5,25 +5,46 @@ interface JsonicDatabase {
   delete(id: string): Promise<boolean>;
   list(): Promise<string[]>;
   stats(): Promise<any>;
+  query(filter: any, options?: QueryOptions): Promise<any[]>;
+  find(filter?: any): QueryChainable;
+  findOne(filter?: any): Promise<any>;
+}
+
+interface QueryOptions {
+  projection?: Record<string, boolean>;
+  sort?: Array<[string, number]>;
+  limit?: number;
+  skip?: number;
+}
+
+interface QueryChainable {
+  sort(sortSpec: Record<string, number>): QueryChainable;
+  limit(n: number): QueryChainable;
+  skip(n: number): QueryChainable;
+  project(projection: Record<string, boolean>): QueryChainable;
+  exec(): Promise<any[]>;
+  toArray(): Promise<any[]>;
 }
 
 interface JSONIC {
-  createDatabase(): Promise<JsonicDatabase>;
-  configure(options: { wasmUrl?: string; debug?: boolean }): void;
+  createDatabase(options?: { 
+    enablePersistence?: boolean; 
+    persistenceKey?: string;
+  }): Promise<JsonicDatabase>;
+  configure(options: { 
+    wasmUrl?: string; 
+    debug?: boolean;
+    enablePersistence?: boolean;
+    persistenceKey?: string;
+  }): void;
   version: string;
-}
-
-declare global {
-  interface Window {
-    JSONIC?: JSONIC;
-    JSONIC_READY?: Promise<JSONIC>;
-  }
 }
 
 class JsonicService {
   private static instance: JsonicService;
   private db: JsonicDatabase | null = null;
   private initPromise: Promise<void> | null = null;
+  private jsonicModule: JSONIC | null = null;
   
   private constructor() {}
   
@@ -32,63 +53,6 @@ class JsonicService {
       JsonicService.instance = new JsonicService();
     }
     return JsonicService.instance;
-  }
-  
-  private async loadJsonic(): Promise<void> {
-    if (window.JSONIC) {
-      return;
-    }
-
-    // Check if already loading via JSONIC_READY promise
-    if (window.JSONIC_READY) {
-      await window.JSONIC_READY;
-      return;
-    }
-    
-    // Check if script is already loaded
-    if (document.querySelector('script[src*="jsonic.esm.js"]')) {
-      // Wait for JSONIC_READY event
-      await new Promise<void>((resolve) => {
-        window.addEventListener('jsonic-ready', () => resolve(), { once: true });
-        // Timeout after 10 seconds
-        setTimeout(() => resolve(), 10000);
-      });
-      
-      if (!window.JSONIC) {
-        throw new Error('JSONIC failed to load');
-      }
-      return;
-    }
-    
-    // Load the ES module version
-    return new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.type = 'module';
-      script.src = import.meta.env.BASE_URL + 'jsonic.esm.js';
-      
-      // Set up event listener for jsonic-ready event
-      const onReady = () => {
-        window.removeEventListener('jsonic-ready', onReady);
-        resolve();
-      };
-      
-      window.addEventListener('jsonic-ready', onReady);
-      
-      script.onerror = () => {
-        window.removeEventListener('jsonic-ready', onReady);
-        reject(new Error('Failed to load JSONIC script'));
-      };
-      
-      document.head.appendChild(script);
-      
-      // Timeout after 10 seconds
-      setTimeout(() => {
-        if (!window.JSONIC) {
-          window.removeEventListener('jsonic-ready', onReady);
-          reject(new Error('JSONIC load timeout'));
-        }
-      }, 10000);
-    });
   }
   
   async initialize(): Promise<void> {
@@ -103,22 +67,38 @@ class JsonicService {
   
   private async performInitialization(): Promise<void> {
     try {
-      await this.loadJsonic();
+      // Build the correct URL for the ES module wrapper
+      const baseUrl = import.meta.env.BASE_URL || '/';
+      const jsonicUrl = `${baseUrl}jsonic-wrapper.esm.js`;
       
-      if (!window.JSONIC) {
-        throw new Error('JSONIC not available after loading');
+      // Dynamically import the ES module
+      const module = await import(/* @vite-ignore */ jsonicUrl) as { default: JSONIC };
+      this.jsonicModule = module.default;
+      
+      if (!this.jsonicModule) {
+        throw new Error('JSONIC module not found');
       }
       
-      // Configure JSONIC to use the correct WASM path
-      window.JSONIC.configure({
-        wasmUrl: import.meta.env.BASE_URL + 'jsonic_wasm_bg.wasm',
-        debug: import.meta.env.DEV
+      // Configure JSONIC with correct paths for both dev and production (GitHub Pages)
+      const wasmUrl = window.location.pathname.startsWith('/agentx-benchmark-ui/') 
+        ? '/agentx-benchmark-ui/jsonic_wasm_bg.wasm'
+        : `${baseUrl}jsonic_wasm_bg.wasm`;
+        
+      this.jsonicModule.configure({
+        wasmUrl,
+        debug: import.meta.env.DEV,
+        enablePersistence: true,
+        persistenceKey: 'agentx_benchmark_db'
       });
       
-      console.log('JSONIC version:', window.JSONIC.version);
+      console.log('JSONIC version:', this.jsonicModule.version);
+      console.log('WASM URL:', wasmUrl);
       
-      this.db = await window.JSONIC.createDatabase();
-      console.log('JSONIC database initialized successfully');
+      this.db = await this.jsonicModule.createDatabase({
+        enablePersistence: true,
+        persistenceKey: 'agentx_benchmark_db'
+      });
+      console.log('JSONIC database initialized with MongoDB-like queries and OPFS persistence');
       
       const stats = await this.db.stats();
       console.log('JSONIC stats:', stats);
@@ -152,12 +132,18 @@ class JsonicService {
   
   async update(id: string, data: any): Promise<void> {
     const db = await this.getDatabase();
-    return db.update(id, data);
+    const result = await db.update(id, data);
+    if (!result) {
+      throw new Error('Failed to update document');
+    }
   }
   
   async delete(id: string): Promise<void> {
     const db = await this.getDatabase();
-    return db.delete(id);
+    const result = await db.delete(id);
+    if (!result) {
+      throw new Error('Failed to delete document');
+    }
   }
   
   async listIds(): Promise<string[]> {
@@ -172,17 +158,94 @@ class JsonicService {
   
   async query(filter: (item: any) => boolean): Promise<any[]> {
     const db = await this.getDatabase();
-    const ids = await db.list_ids();
+    const ids = await db.list();
     const results: any[] = [];
     
     for (const id of ids) {
-      const item = await db.get(id);
-      if (filter(item)) {
-        results.push({ id, ...item });
+      const doc = await db.get(id);
+      if (doc && doc.content) {
+        // The actual data is in doc.content
+        if (filter(doc.content)) {
+          results.push({ id, ...doc.content });
+        }
       }
     }
     
     return results;
+  }
+
+  // New MongoDB-like query methods
+  async findDocuments(filter: any, options?: QueryOptions): Promise<any[]> {
+    const db = await this.getDatabase();
+    return db.query(filter, options);
+  }
+
+  async findOne(filter: any): Promise<any> {
+    const db = await this.getDatabase();
+    return db.findOne(filter);
+  }
+
+  find(filter: any = {}): QueryChainable {
+    // Return a promise that resolves to a chainable query
+    const dbPromise = this.getDatabase();
+    
+    const chainable = {
+      sort: function(_sortSpec: Record<string, number>) {
+        return this;
+      },
+      limit: function(_n: number) {
+        return this;
+      },
+      skip: function(_n: number) {
+        return this;
+      },
+      project: function(_projection: Record<string, boolean>) {
+        return this;
+      },
+      exec: async function() {
+        const db = await dbPromise;
+        return db.find(filter).exec();
+      },
+      toArray: async function() {
+        const db = await dbPromise;
+        return db.find(filter).toArray();
+      }
+    } as QueryChainable;
+
+    // Make chainable methods actually chain properly
+    let queryOptions: QueryOptions = {};
+    
+    chainable.sort = (sortSpec: Record<string, number>) => {
+      queryOptions.sort = Object.entries(sortSpec).map(([k, v]) => [k, v]);
+      return chainable;
+    };
+    
+    chainable.limit = (n: number) => {
+      queryOptions.limit = n;
+      return chainable;
+    };
+    
+    chainable.skip = (n: number) => {
+      queryOptions.skip = n;
+      return chainable;
+    };
+    
+    chainable.project = (projection: Record<string, boolean>) => {
+      queryOptions.projection = projection;
+      return chainable;
+    };
+    
+    chainable.exec = async () => {
+      const db = await dbPromise;
+      return db.query(filter, queryOptions);
+    };
+    
+    chainable.toArray = async () => {
+      const db = await dbPromise;
+      return db.query(filter, queryOptions);
+    };
+    
+    return chainable;
   }
 }
 
