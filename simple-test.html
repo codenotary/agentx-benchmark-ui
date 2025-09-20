@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple JSONIC Test</title>
+</head>
+<body>
+    <h1>Simple JSONIC Test</h1>
+    <pre id="output"></pre>
+    
+    <script type="module">
+        // Simple direct test of JSONIC WASM
+        import init, { JsonDB } from './jsonic_wasm.js';
+        
+        const log = (msg) => {
+            document.getElementById('output').textContent += msg + '\n';
+            console.log(msg);
+        };
+        
+        async function test() {
+            // Initialize WASM
+            await init();
+            log('✅ WASM initialized');
+            
+            // Create database
+            const db = new JsonDB();
+            log('✅ Database created');
+            
+            // Insert a document
+            const doc = { name: 'test', value: 123 };
+            const result = db.insert(JSON.stringify(doc));
+            log('Insert result: ' + JSON.stringify(result));
+            
+            // List IDs
+            const ids = db.list_ids();
+            log('All IDs: ' + JSON.stringify(ids));
+            
+            // Get document back
+            if (ids && ids.data && ids.data[0]) {
+                const retrieved = db.get(ids.data[0]);
+                log('Retrieved: ' + JSON.stringify(retrieved));
+            }
+            
+            // Stats
+            const stats = db.stats();
+            log('Stats: ' + JSON.stringify(stats));
+        }
+        
+        test().catch(e => log('ERROR: ' + e));
+    </script>
+</body>
+</html>

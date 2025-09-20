@@ -15,7 +15,9 @@
     <div id="output"></div>
 
     <script type="module">
-        import { configure, initialize, insert, list, get, query } from '/jsonic-wrapper.esm.js';
+        const basePath = location.pathname.includes('agentx-benchmark-ui') ? '/agentx-benchmark-ui/' : '/';
+        const moduleUrl = `${basePath}jsonic-wrapper.esm.js`;
+        const { configure, initialize, insert, list, get, query } = await import(moduleUrl);
         
         window.log = function(msg) {
             const output = document.getElementById('output');
