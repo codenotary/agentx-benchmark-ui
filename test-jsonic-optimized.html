@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>JSONIC Optimized Integration Test</title>
+    <style>
+        body { font-family: system-ui; max-width: 900px; margin: 40px auto; padding: 20px; }
+        .status { padding: 12px; margin: 10px 0; border-radius: 4px; font-weight: 500; }
+        .loading { background: #fff3cd; color: #856404; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        pre { background: #f5f5f5; padding: 12px; border-radius: 4px; overflow-x: auto; }
+        .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
+        .metric { background: white; padding: 15px; border: 1px solid #ddd; border-radius: 4px; }
+        .metric-label { color: #666; font-size: 0.9em; }
+        .metric-value { font-size: 1.5em; font-weight: bold; color: #333; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; border: 1px solid #ddd; border-radius: 4px; background: white; }
+        button:hover { background: #f0f0f0; }
+        .test-results { margin-top: 20px; }
+        .test-result { padding: 8px; margin: 5px 0; border-left: 3px solid #28a745; background: #f8f9fa; }
+        .test-result.fail { border-left-color: #dc3545; }
+    </style>
+</head>
+<body>
+    <h1>🚀 JSONIC Optimized Integration Test</h1>
+    
+    <div id="load-status" class="status loading">Initializing JSONIC...</div>
+    
+    <div class="metrics" id="metrics" style="display: none;">
+        <div class="metric">
+            <div class="metric-label">Load Time</div>
+            <div class="metric-value" id="load-time">-</div>
+        </div>
+        <div class="metric">
+            <div class="metric-label">WASM Size</div>
+            <div class="metric-value" id="wasm-size">-</div>
+        </div>
+        <div class="metric">
+            <div class="metric-label">Version</div>
+            <div class="metric-value" id="version">-</div>
+        </div>
+        <div class="metric">
+            <div class="metric-label">Documents</div>
+            <div class="metric-value" id="doc-count">0</div>
+        </div>
+    </div>
+    
+    <div id="controls" style="display: none;">
+        <h2>Interactive Tests</h2>
+        <button onclick="runBasicTests()">Run Basic Tests</button>
+        <button onclick="runPerformanceTest()">Performance Test (1000 docs)</button>
+        <button onclick="testLargeDocument()">Test Large Document</button>
+        <button onclick="clearDatabase()">Clear Database</button>
+    </div>
+    
+    <div class="test-results" id="test-results"></div>
+    
+    <pre id="output"></pre>
+
+    <script type="module">
+        // Import the ES module version of JSONIC
+        const startTime = performance.now();
+        let loadTime = 0;
+        let db = null;
+        
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            output.textContent += `[${timestamp}] ${message}\n`;
+            console.log(message);
+        }
+        
+        function updateStatus(message, type = 'loading') {
+            const status = document.getElementById('load-status');
+            status.className = `status ${type}`;
+            status.textContent = message;
+        }
+        
+        function addTestResult(test, success, details = '') {
+            const results = document.getElementById('test-results');
+            const div = document.createElement('div');
+            div.className = `test-result ${success ? '' : 'fail'}`;
+            div.innerHTML = `<strong>${success ? '✅' : '❌'} ${test}</strong>${details ? ': ' + details : ''}`;
+            results.appendChild(div);
+        }
+        
+        async function initializeJSONIC() {
+            try {
+                log('Loading JSONIC ES module...');
+                
+                // Dynamically import the ES module
+                const module = await import('./jsonic.esm.js');
+                const JSONIC = module.default;
+                
+                // Make it globally available for interactive testing
+                window.JSONIC = JSONIC;
+                
+                log(`JSONIC loaded, version: ${JSONIC.version}`);
+                document.getElementById('version').textContent = JSONIC.version;
+                
+                // Configure JSONIC
+                JSONIC.configure({
+                    wasmUrl: './jsonic_wasm_bg.wasm',
+                    debug: true
+                });
+                
+                log('Creating database instance...');
+                db = await JSONIC.createDatabase();
+                window.db = db; // Make available globally for testing
+                
+                loadTime = performance.now() - startTime;
+                log(`Database initialized in ${loadTime.toFixed(2)}ms`);
+                
+                // Update UI
+                updateStatus('✅ JSONIC initialized successfully!', 'success');
+                document.getElementById('load-time').textContent = `${loadTime.toFixed(0)}ms`;
+                document.getElementById('metrics').style.display = 'grid';
+                document.getElementById('controls').style.display = 'block';
+                
+                // Get initial stats
+                await updateStats();
+                
+                // Estimate WASM size
+                const wasmSizeEstimate = '109KB';
+                document.getElementById('wasm-size').textContent = wasmSizeEstimate;
+                
+            } catch (error) {
+                updateStatus(`❌ Failed to initialize: ${error.message}`, 'error');
+                log(`Error: ${error.stack}`, 'error');
+                console.error(error);
+            }
+        }
+        
+        async function updateStats() {
+            try {
+                const stats = await db.stats();
+                document.getElementById('doc-count').textContent = stats.document_count || 0;
+                return stats;
+            } catch (error) {
+                log(`Failed to get stats: ${error.message}`, 'error');
+            }
+        }
+        
+        window.runBasicTests = async function() {
+            const results = document.getElementById('test-results');
+            results.innerHTML = '<h3>Basic Tests</h3>';
+            
+            try {
+                // Test 1: Insert
+                log('Test 1: Insert document...');
+                const testDoc = {
+                    type: 'test',
+                    name: 'Basic Test Document',
+                    timestamp: new Date().toISOString(),
+                    data: { value: 42, nested: { key: 'value' } }
+                };
+                const id = await db.insert(testDoc);
+                addTestResult('Insert Document', true, `ID: ${id.substring(0, 8)}...`);
+                
+                // Test 2: Get
+                log('Test 2: Retrieve document...');
+                const retrieved = await db.get(id);
+                const success = retrieved && retrieved.content && retrieved.content.name === testDoc.name;
+                addTestResult('Get Document', success, success ? 'Content verified' : 'Content mismatch');
+                
+                // Test 3: Update
+                log('Test 3: Update document...');
+                const updatedDoc = { ...testDoc, name: 'Updated Document', updated: true };
+                await db.update(id, updatedDoc);
+                const updated = await db.get(id);
+                const updateSuccess = updated && updated.content && updated.content.updated === true;
+                addTestResult('Update Document', updateSuccess, updateSuccess ? 'Update verified' : 'Update failed');
+                
+                // Test 4: List
+                log('Test 4: List documents...');
+                const ids = await db.list();
+                addTestResult('List Documents', ids.length > 0, `Found ${ids.length} documents`);
+                
+                // Test 5: Delete
+                log('Test 5: Delete document...');
+                await db.delete(id);
+                const deleted = await db.get(id);
+                addTestResult('Delete Document', !deleted || deleted === null, deleted ? 'Failed to delete' : 'Successfully deleted');
+                
+                await updateStats();
+                log('Basic tests completed!');
+                
+            } catch (error) {
+                addTestResult('Test Suite', false, error.message);
+                log(`Test error: ${error.message}`, 'error');
+            }
+        };
+        
+        window.runPerformanceTest = async function() {
+            const results = document.getElementById('test-results');
+            results.innerHTML = '<h3>Performance Test</h3>';
+            
+            const count = 1000;
+            const docs = [];
+            
+            try {
+                // Insert test
+                log(`Inserting ${count} documents...`);
+                const insertStart = performance.now();
+                
+                for (let i = 0; i < count; i++) {
+                    const id = await db.insert({
+                        index: i,
+                        type: 'performance_test',
+                        data: 'x'.repeat(100),
+                        timestamp: Date.now()
+                    });
+                    docs.push(id);
+                }
+                
+                const insertTime = performance.now() - insertStart;
+                const insertsPerSec = Math.round(count / (insertTime / 1000));
+                addTestResult('Insert Performance', true, 
+                    `${count} docs in ${insertTime.toFixed(0)}ms (${insertsPerSec} ops/sec)`);
+                
+                // Read test
+                log(`Reading ${count} documents...`);
+                const readStart = performance.now();
+                
+                for (const id of docs) {
+                    await db.get(id);
+                }
+                
+                const readTime = performance.now() - readStart;
+                const readsPerSec = Math.round(count / (readTime / 1000));
+                addTestResult('Read Performance', true, 
+                    `${count} docs in ${readTime.toFixed(0)}ms (${readsPerSec} ops/sec)`);
+                
+                await updateStats();
+                log('Performance test completed!');
+                
+            } catch (error) {
+                addTestResult('Performance Test', false, error.message);
+                log(`Performance test error: ${error.message}`, 'error');
+            }
+        };
+        
+        window.testLargeDocument = async function() {
+            const results = document.getElementById('test-results');
+            results.innerHTML = '<h3>Large Document Test</h3>';
+            
+            try {
+                // Create a large document similar to a Grafana dashboard
+                const largeDoc = {
+                    type: 'dashboard',
+                    title: 'Test Dashboard',
+                    panels: Array.from({ length: 50 }, (_, i) => ({
+                        id: i,
+                        title: `Panel ${i}`,
+                        type: 'graph',
+                        datasource: 'prometheus',
+                        targets: Array.from({ length: 5 }, (_, j) => ({
+                            expr: `rate(metric_${i}_${j}[5m])`,
+                            refId: String.fromCharCode(65 + j)
+                        })),
+                        options: {
+                            legend: { show: true },
+                            tooltip: { mode: 'single' },
+                            thresholds: Array.from({ length: 3 }, (_, k) => ({
+                                value: k * 100,
+                                color: ['green', 'yellow', 'red'][k]
+                            }))
+                        }
+                    })),
+                    templating: {
+                        list: Array.from({ length: 10 }, (_, i) => ({
+                            name: `var${i}`,
+                            query: `label_values(metric, label${i})`,
+                            current: { value: `value${i}` }
+                        }))
+                    },
+                    annotations: {
+                        list: Array.from({ length: 5 }, (_, i) => ({
+                            name: `annotation${i}`,
+                            datasource: 'prometheus',
+                            expr: `ALERTS{alertstate="firing"}`
+                        }))
+                    }
+                };
+                
+                log('Inserting large document...');
+                const id = await db.insert(largeDoc);
+                addTestResult('Insert Large Document', true, `ID: ${id.substring(0, 8)}...`);
+                
+                log('Retrieving large document...');
+                const retrieved = await db.get(id);
+                
+                const hasContent = retrieved && retrieved.content && retrieved.content.panels;
+                const correctPanelCount = hasContent && retrieved.content.panels.length === 50;
+                
+                addTestResult('Retrieve Large Document', hasContent && correctPanelCount, 
+                    hasContent ? `${retrieved.content.panels.length} panels retrieved` : 'No content found');
+                
+                // Verify the content is not empty
+                const contentStr = JSON.stringify(retrieved.content);
+                const sizeKB = (contentStr.length / 1024).toFixed(2);
+                addTestResult('Content Verification', contentStr !== '{}', 
+                    `Content size: ${sizeKB}KB`);
+                
+                await updateStats();
+                log('Large document test completed!');
+                
+            } catch (error) {
+                addTestResult('Large Document Test', false, error.message);
+                log(`Large document test error: ${error.message}`, 'error');
+            }
+        };
+        
+        window.clearDatabase = async function() {
+            try {
+                log('Clearing database...');
+                const ids = await db.list();
+                for (const id of ids) {
+                    await db.delete(id);
+                }
+                await updateStats();
+                addTestResult('Clear Database', true, `Deleted ${ids.length} documents`);
+            } catch (error) {
+                addTestResult('Clear Database', false, error.message);
+            }
+        };
+        
+        // Initialize on load
+        initializeJSONIC();
+    </script>
+</body>
+</html>
