@@ -19,6 +19,17 @@ interface JsonicDB {
 let db: JsonicDB | null = null;
 let initPromise: Promise<JsonicDB | null> | null = null;
 
+async function waitForJsonic(maxAttempts = 50, delay = 100): Promise<any> {
+  for (let i = 0; i < maxAttempts; i++) {
+    if (typeof (window as any).JSONIC !== 'undefined') {
+      console.log(`✅ JSONIC loaded after ${i * delay}ms`);
+      return (window as any).JSONIC;
+    }
+    await new Promise(resolve => setTimeout(resolve, delay));
+  }
+  throw new Error('JSONIC library failed to load after 5 seconds');
+}
+
 async function initJsonicDatabase(): Promise<JsonicDB> {
   if (initPromise) {
     const result = await initPromise;
@@ -34,13 +45,11 @@ async function initJsonicDatabase(): Promise<JsonicDB> {
     try {
       console.log('🚀 Initializing JSONIC database...');
       
-      // Check if JSONIC is available from the standalone script
-      if (typeof (window as any).JSONIC === 'undefined') {
-        throw new Error('JSONIC standalone library not loaded. Please ensure jsonic.min.js is included.');
-      }
+      // Wait for JSONIC to be available
+      console.log('⏳ Waiting for JSONIC library to load...');
+      const JSONIC = await waitForJsonic();
       
       console.log('📦 Using JSONIC standalone library...');
-      const JSONIC = (window as any).JSONIC;
       
       // Create database instance using the standalone API
       console.log('💾 Creating database instance...');
