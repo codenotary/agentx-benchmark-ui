@@ -1,7 +1,16 @@
-// This file is auto-generated during build
-// DO NOT EDIT MANUALLY - it will be overwritten
+// Database configuration for benchmark.db
 export const DATABASE_CONFIG = {
   fileSize: 491520,
   chunkSize: 4096,
-  lastUpdated: '2025-09-19T16:48:56.634Z'
+  lastUpdated: new Date().toISOString(),
+  dbPath: '/benchmark.db',
+  tables: [
+    'benchmark_runs',
+    'test_results', 
+    'model_performance',
+    'category_performance',
+    'model_comparison',
+    'performance_trends',
+    'latest_model_performance'
+  ]
 };

@@ -88,7 +88,7 @@ export default function TestResultsTable({ runId }: TestResultsTableProps) {
   };
 
   const getCategoryIcon = (category: string) => {
-    const icons: Record<string, JSX.Element> = {
+    const icons: Record<string, React.ReactElement> = {
       math: <Hash className="h-4 w-4" />,
       coding: <Code className="h-4 w-4" />,
       technical: <FileText className="h-4 w-4" />,

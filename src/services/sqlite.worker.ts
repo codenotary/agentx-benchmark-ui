@@ -1,86 +1,72 @@
 import * as Comlink from 'comlink';
-import initSqlJs from '@jlongster/sql.js';
-import { SQLiteFS } from 'absurd-sql';
-import IndexedDBBackend from 'absurd-sql/dist/indexeddb-backend';
 
 let db: any = null;
-let sqlFS: any = null;
+let SQL: any = null;
 
 const sqliteWorker = {
   async init(baseUrl: string) {
-    if (db) return true;
+    if (db) {
+      console.log('[Worker] Database already initialized');
+      return true;
+    }
+    
+    console.log('[Worker] Initializing with baseUrl:', baseUrl);
     
     try {
-      // Initialize SQL.js with the WASM file
-      const SQL = await initSqlJs({
+      // Load SQL.js from CDN as a fallback
+      console.log('[Worker] Loading SQL.js...');
+      
+      // Import sql.js dynamically
+      const initSqlJs = (await import('sql.js')).default;
+      
+      SQL = await initSqlJs({
         locateFile: (file: string) => {
-          if (file === 'sql-wasm.wasm') {
-            // Use the sql.js wasm file from node_modules
-            return new URL('@jlongster/sql.js/dist/sql-wasm.wasm', import.meta.url).href;
-          }
-          return file;
+          return `https://sql.js.org/dist/${file}`;
         }
       });
+      
+      console.log('[Worker] SQL.js loaded successfully');
 
-      // Initialize absurd-sql with IndexedDB backend
-      sqlFS = new SQLiteFS(SQL.FS, new IndexedDBBackend());
-      SQL.register_for_idb(sqlFS);
-
-      SQL.FS.mkdir('/sql');
-      SQL.FS.mount(sqlFS, {}, '/sql');
-
-      const dbPath = '/sql/benchmark.db';
       const dbUrl = `${baseUrl}benchmark.db`;
       
-      console.log('Fetching database from:', dbUrl);
+      console.log('[Worker] Fetching database from:', dbUrl);
       
-      // Check if database already exists by trying to read it
-      let exists = false;
-      try {
-        const stats = SQL.FS.stat(dbPath);
-        exists = stats.size > 0;
-      } catch (e) {
-        // File doesn't exist
-        exists = false;
+      // Download the database file
+      const response = await fetch(dbUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch database: ${response.status} ${response.statusText}`);
       }
       
-      if (!exists) {
-        // Download the database file
-        console.log('Downloading database for first time...');
-        const response = await fetch(dbUrl);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch database: ${response.status} ${response.statusText}`);
-        }
-        
-        const buffer = await response.arrayBuffer();
-        const data = new Uint8Array(buffer);
-        
-        // Write to the virtual filesystem
-        SQL.FS.writeFile(dbPath, data);
-        console.log('Database downloaded and saved to IndexedDB');
-      } else {
-        console.log('Using cached database from IndexedDB');
-      }
+      console.log('[Worker] Database response received, reading data...');
+      const buffer = await response.arrayBuffer();
+      const data = new Uint8Array(buffer);
       
-      // Open the database
-      db = new SQL.Database(dbPath, { filename: true });
+      console.log('[Worker] Database size:', data.length, 'bytes');
       
-      // Set some pragmas for better performance
-      db.exec('PRAGMA journal_mode=MEMORY');
+      // Open the database directly from the downloaded data
+      db = new SQL.Database(data);
+      
+      // Test the database with a simple query
+      const testResult = db.exec("SELECT COUNT(*) as count FROM sqlite_master WHERE type='table'");
+      console.log('[Worker] Database tables count:', testResult[0]?.values[0][0]);
+      
+      console.log('[Worker] Database loaded successfully');
       
       return true;
     } catch (error) {
-      console.error('Failed to initialize database:', error);
+      console.error('[Worker] Failed to initialize database:', error);
       throw error;
     }
   },
 
   async query(sql: string, params: any[] = []) {
     if (!db) {
+      console.error('[Worker] Database not initialized');
       throw new Error('Database not initialized');
     }
     
     try {
+      console.log('[Worker] Executing query:', sql.substring(0, 100) + '...');
       const stmt = db.prepare(sql);
       const results = [];
       
@@ -89,23 +75,17 @@ const sqliteWorker = {
         stmt.bind(params);
       }
       
-      // Get column names
-      const columns = stmt.getColumnNames();
-      
       // Fetch all rows
       while (stmt.step()) {
-        const row = stmt.get();
-        const obj: any = {};
-        columns.forEach((col, idx) => {
-          obj[col] = row[idx];
-        });
-        results.push(obj);
+        const row = stmt.getAsObject();
+        results.push(row);
       }
       
       stmt.free();
+      console.log('[Worker] Query returned', results.length, 'rows');
       return results;
     } catch (error) {
-      console.error('Query failed:', sql, error);
+      console.error('[Worker] Query failed:', sql, error);
       throw error;
     }
   },
@@ -115,10 +95,7 @@ const sqliteWorker = {
       db.close();
       db = null;
     }
-    if (sqlFS) {
-      // Note: SQLiteFS doesn't have a close method
-      sqlFS = null;
-    }
+    SQL = null;
   }
 };
 

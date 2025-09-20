@@ -16,27 +16,54 @@ interface SqliteWorker {
 
 let worker: Worker | null = null;
 let sqliteApi: Comlink.Remote<SqliteWorker> | null = null;
-let initialized = false;
+let initPromise: Promise<Comlink.Remote<SqliteWorker> | null> | null = null;
 
 async function initDatabase() {
-  if (initialized) return sqliteApi;
+  // Return existing initialization promise if one is in progress
+  if (initPromise) {
+    return initPromise;
+  }
   
-  // Create worker
-  worker = new Worker(
-    new URL('./sqlite.worker.ts', import.meta.url),
-    { type: 'module' }
-  );
+  // Return existing API if already initialized
+  if (sqliteApi) {
+    return sqliteApi;
+  }
   
-  // Wrap with Comlink
-  sqliteApi = Comlink.wrap<SqliteWorker>(worker);
+  // Start initialization
+  initPromise = (async () => {
+    try {
+      // Create worker
+      worker = new Worker(
+        new URL('./sqlite.worker.ts', import.meta.url),
+        { type: 'module' }
+      );
+      
+      // Wrap with Comlink
+      sqliteApi = Comlink.wrap<SqliteWorker>(worker);
+      
+      // Initialize with the base URL for the database files
+      const base = import.meta.env.BASE_URL || '/';
+      const baseUrl = `${window.location.origin}${base}`;
+      console.log('Initializing SQLite database with baseUrl:', baseUrl);
+      
+      await sqliteApi.init(baseUrl);
+      console.log('SQLite database initialized successfully');
+      
+      return sqliteApi;
+    } catch (error) {
+      console.error('Failed to initialize SQLite database:', error);
+      // Clear state on error
+      sqliteApi = null;
+      initPromise = null;
+      if (worker) {
+        worker.terminate();
+        worker = null;
+      }
+      throw error;
+    }
+  })();
   
-  // Initialize with the base URL for the database files
-  const base = import.meta.env.BASE_URL || '/';
-  const baseUrl = `${window.location.origin}${base}`;
-  await sqliteApi.init(baseUrl);
-  
-  initialized = true;
-  return sqliteApi;
+  return initPromise;
 }
 
 export async function fetchBenchmarkRunsStatic(): Promise<BenchmarkRun[]> {
@@ -182,7 +209,7 @@ export async function closeDatabaseConnection() {
   if (sqliteApi) {
     await sqliteApi.close();
     sqliteApi = null;
-    initialized = false;
+    initPromise = null;
   }
   if (worker) {
     worker.terminate();

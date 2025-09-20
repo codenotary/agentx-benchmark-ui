@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchTestResults } from '../services/api';
 import { FileText, Hash, Zap, Activity, BarChart, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
@@ -76,7 +76,7 @@ export default function PromptSummary({ runId }: PromptSummaryProps) {
   }
 
   const getCategoryIcon = (category: string) => {
-    const icons: { [key: string]: JSX.Element } = {
+    const icons: { [key: string]: React.ReactElement } = {
       math: <Hash className="h-4 w-4" />,
       coding: <FileText className="h-4 w-4" />,
       reasoning: <Zap className="h-4 w-4" />,
