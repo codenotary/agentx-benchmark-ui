@@ -1,8 +1,7 @@
 // Database configuration
 export const DB_CONFIG = {
   // Set to 'jsonic' to use the JSONIC database, 'json' to use static JSON files
-  // Currently using 'json' mode for stability - switch to 'jsonic' once WASM is properly deployed
-  mode: 'json' as 'jsonic' | 'json',
+  mode: 'jsonic' as 'jsonic' | 'json',
   
   // JSONIC configuration
   jsonic: {

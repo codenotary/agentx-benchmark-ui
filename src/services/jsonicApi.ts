@@ -34,21 +34,17 @@ async function initJsonicDatabase(): Promise<JsonicDB> {
     try {
       console.log('🚀 Initializing JSONIC database...');
       
-      // Dynamic import of JSONIC WASM module from public directory
-      // Use a dynamic string to prevent Vite from trying to resolve at build time
-      const modulePath = '/jsonic/jsonic_wasm.js';
-      console.log('📦 Loading JSONIC module from', modulePath, '...');
-      const module = await import(/* @vite-ignore */ modulePath);
-      console.log('✅ JSONIC module loaded');
+      // Check if JSONIC is available from the standalone script
+      if (typeof (window as any).JSONIC === 'undefined') {
+        throw new Error('JSONIC standalone library not loaded. Please ensure jsonic.min.js is included.');
+      }
       
-      // Initialize the WASM module with the correct path
-      console.log('🔧 Initializing WASM from /jsonic/jsonic_wasm_bg.wasm...');
-      await module.default('/jsonic/jsonic_wasm_bg.wasm');
-      console.log('✅ WASM initialized');
+      console.log('📦 Using JSONIC standalone library...');
+      const JSONIC = (window as any).JSONIC;
       
-      // Create new database instance
+      // Create database instance using the standalone API
       console.log('💾 Creating database instance...');
-      db = new (module as any).JsonDB();
+      db = await JSONIC.createDatabase();
       
       console.log('✅ JSONIC database initialized successfully');
       return db;
