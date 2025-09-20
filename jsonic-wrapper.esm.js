@@ -1,6 +1,6 @@
 /**
  * JSONIC ES Module Wrapper with MongoDB-like queries and OPFS persistence
- * Version: 1.0.2 - Fixed WASM compatibility, removed non-existent query methods
+ * Version: 1.0.5 - Added detailed debugging for insert/get operations
  */
 
 import init, { JsonDB } from './jsonic_wasm.js';
@@ -124,6 +124,12 @@ class JsonicDatabase {
         // Handle both object and string responses from WASM
         const parsed = typeof result === 'string' ? JSON.parse(result) : result;
         
+        // Debug: log what was inserted and the returned ID
+        if (CONFIG.debug) {
+            console.log('[JSONIC] Inserted document:', data);
+            console.log('[JSONIC] Returned ID:', parsed.data);
+        }
+        
         if (parsed.success && this.enablePersistence) {
             await this.saveToOPFS();
         }
@@ -136,8 +142,15 @@ class JsonicDatabase {
         // Handle both object and string responses from WASM
         const parsed = typeof result === 'string' ? JSON.parse(result) : result;
         
+        if (CONFIG.debug && id.includes('benchmark')) {
+            console.log('[JSONIC] Get document ID:', id);
+            console.log('[JSONIC] Raw result:', result);
+            console.log('[JSONIC] Parsed result:', parsed);
+        }
+        
         if (parsed.success) {
-            return { id, content: parsed.data, metadata: { version: 1 } };
+            // Return data directly for compatibility with queries
+            return parsed.data;
         }
         return null;
     }
@@ -191,14 +204,25 @@ class JsonicDatabase {
         const ids = await this.list();
         let results = [];
         
+        console.log(`[JSONIC] clientSideQuery - Found ${ids.length} document IDs`);
+        console.log(`[JSONIC] clientSideQuery - Filter:`, filter);
+        
         for (const id of ids) {
             const doc = await this.get(id);
-            if (doc && doc.content) {
-                if (this.matchesFilter(doc.content, filter)) {
-                    results.push({ id, ...doc.content });
+            
+            // Debug first document structure
+            if (results.length === 0 && doc) {
+                console.log(`[JSONIC] First document structure:`, doc);
+            }
+            
+            if (doc) {
+                if (this.matchesFilter(doc, filter)) {
+                    results.push({ id, ...doc });
                 }
             }
         }
+        
+        console.log(`[JSONIC] clientSideQuery - Matched ${results.length} documents`)
         
         // Apply sorting
         if (options.sort) {
