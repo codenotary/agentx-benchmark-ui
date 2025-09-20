@@ -1,8 +1,8 @@
 // Database configuration
 export const DB_CONFIG = {
   // Set to 'jsonic' to use the JSONIC database, 'json' to use static JSON files
-  // Using JSONIC with proper loading wait mechanism
-  mode: 'jsonic' as 'jsonic' | 'json',
+  // Default to JSON mode for reliability
+  mode: 'json' as 'jsonic' | 'json',
   
   // JSONIC configuration
   jsonic: {
