@@ -69,7 +69,11 @@ class JsonicService {
     try {
       // Build the correct URL for the ES module wrapper
       const baseUrl = import.meta.env.BASE_URL || '/';
-      const jsonicUrl = `${baseUrl}jsonic-wrapper.esm.js`;
+      
+      // In development, use absolute URL. In production, use relative path
+      const jsonicUrl = import.meta.env.DEV 
+        ? `${window.location.origin}/jsonic-wrapper.esm.js`
+        : `${baseUrl}jsonic-wrapper.esm.js`;
       
       // Dynamically import the ES module
       const module = await import(/* @vite-ignore */ jsonicUrl) as { default: JSONIC };

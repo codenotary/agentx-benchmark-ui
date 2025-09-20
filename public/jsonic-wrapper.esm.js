@@ -95,11 +95,13 @@ class JsonicDatabase {
         if (!this.opfsRoot) return;
         
         try {
-            const ids = JSON.parse(await this.db.list_ids());
+            const idsResult = await this.db.list_ids();
+            const ids = typeof idsResult === 'string' ? JSON.parse(idsResult) : idsResult;
             const documents = [];
             
             for (const id of ids.data || []) {
-                const doc = JSON.parse(await this.db.get(id));
+                const docResult = await this.db.get(id);
+                const doc = typeof docResult === 'string' ? JSON.parse(docResult) : docResult;
                 if (doc.success) {
                     documents.push(doc.data);
                 }
@@ -118,7 +120,8 @@ class JsonicDatabase {
     
     async insert(data) {
         const result = await this.db.insert(JSON.stringify(data));
-        const parsed = JSON.parse(result);
+        // Handle both object and string responses from WASM
+        const parsed = typeof result === 'string' ? JSON.parse(result) : result;
         
         if (parsed.success && this.enablePersistence) {
             await this.saveToOPFS();
@@ -129,7 +132,8 @@ class JsonicDatabase {
     
     async get(id) {
         const result = await this.db.get(id);
-        const parsed = JSON.parse(result);
+        // Handle both object and string responses from WASM
+        const parsed = typeof result === 'string' ? JSON.parse(result) : result;
         
         if (parsed.success) {
             return { id, content: parsed.data, metadata: { version: 1 } };
@@ -139,7 +143,8 @@ class JsonicDatabase {
     
     async update(id, data) {
         const result = await this.db.update(id, JSON.stringify(data));
-        const parsed = JSON.parse(result);
+        // Handle both object and string responses from WASM
+        const parsed = typeof result === 'string' ? JSON.parse(result) : result;
         
         if (parsed.success && this.enablePersistence) {
             await this.saveToOPFS();
@@ -150,7 +155,8 @@ class JsonicDatabase {
     
     async delete(id) {
         const result = await this.db.delete(id);
-        const parsed = JSON.parse(result);
+        // Handle both object and string responses from WASM
+        const parsed = typeof result === 'string' ? JSON.parse(result) : result;
         
         if (parsed.success && this.enablePersistence) {
             await this.saveToOPFS();
@@ -161,13 +167,15 @@ class JsonicDatabase {
     
     async list() {
         const result = await this.db.list_ids();
-        const parsed = JSON.parse(result);
+        // Handle both object and string responses from WASM
+        const parsed = typeof result === 'string' ? JSON.parse(result) : result;
         return parsed.data || [];
     }
     
     async stats() {
         const result = await this.db.stats();
-        const parsed = JSON.parse(result);
+        // Handle both object and string responses from WASM
+        const parsed = typeof result === 'string' ? JSON.parse(result) : result;
         return parsed.data || { document_count: 0, wasm_initialized: true };
     }
 
@@ -190,7 +198,7 @@ class JsonicDatabase {
                 result = await this.db.query(JSON.stringify(filter));
             }
             
-            const parsed = JSON.parse(result);
+            const parsed = typeof result === 'string' ? JSON.parse(result) : result;
             if (parsed.success) {
                 return parsed.data || [];
             }
