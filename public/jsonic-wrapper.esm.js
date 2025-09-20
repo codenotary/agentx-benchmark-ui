@@ -1,6 +1,6 @@
 /**
  * JSONIC ES Module Wrapper with MongoDB-like queries and OPFS persistence
- * Version: 1.0.1 - Fixed JSON parsing for WASM responses
+ * Version: 1.0.2 - Fixed WASM compatibility, removed non-existent query methods
  */
 
 import init, { JsonDB } from './jsonic_wasm.js';
@@ -182,33 +182,8 @@ class JsonicDatabase {
 
     // MongoDB-like query interface
     async query(filter, options = {}) {
-        try {
-            let result;
-            
-            if (Object.keys(options).length > 0) {
-                // Use query_with_options for advanced queries
-                const optionsJson = JSON.stringify({
-                    projection: options.projection,
-                    sort: options.sort,
-                    limit: options.limit,
-                    skip: options.skip
-                });
-                result = await this.db.query_with_options(JSON.stringify(filter), optionsJson);
-            } else {
-                // Simple query without options
-                result = await this.db.query(JSON.stringify(filter));
-            }
-            
-            const parsed = typeof result === 'string' ? JSON.parse(result) : result;
-            if (parsed.success) {
-                return parsed.data || [];
-            }
-            throw new Error(parsed.error || 'Query failed');
-        } catch (error) {
-            console.error('[JSONIC] Query error:', error);
-            // Fallback to client-side filtering
-            return this.clientSideQuery(filter, options);
-        }
+        // JSONIC WASM doesn't have query methods yet, use client-side filtering
+        return this.clientSideQuery(filter, options);
     }
 
     // Client-side query fallback
