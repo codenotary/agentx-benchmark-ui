@@ -1,12 +1,9 @@
 {
-  "exportedAt": "2025-09-20T11:40:25.547Z",
-  "tableCount": 4,
-  "rowCounts": {
-    "benchmark_runs": 13,
-    "model_performance": 63,
-    "test_results": 401,
-    "performance_trends": 69,
-    "category_performance": 104
-  },
-  "fileSize": 536345
+  "lastUpdated": "2025-09-20T12:50:19.569Z",
+  "recordCounts": {
+    "benchmark_runs": 14,
+    "test_results": 531,
+    "model_performance": 76,
+    "performance_trends": 94
+  }
 }
