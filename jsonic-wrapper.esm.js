@@ -1,5 +1,6 @@
 /**
  * JSONIC ES Module Wrapper with MongoDB-like queries and OPFS persistence
+ * Version: 1.0.1 - Fixed JSON parsing for WASM responses
  */
 
 import init, { JsonDB } from './jsonic_wasm.js';
