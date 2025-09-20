@@ -30,7 +30,7 @@ npm-debug.log*
 # Database files (except the one in public)
 *.db
 !public/benchmark.db
-benchmark_history.db
+!public/benchmark_history.db
 
 # Temporary files
 *.tmp
