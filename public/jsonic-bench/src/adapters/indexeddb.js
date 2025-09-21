@@ -23,6 +23,9 @@ export class IndexedDBAdapter extends DatabaseAdapter {
   }
 
   async init() {
+    // First, delete the existing database to ensure clean state for benchmarks
+    await this.deleteDatabase();
+    
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(this.dbName, this.version);
       
@@ -52,6 +55,35 @@ export class IndexedDBAdapter extends DatabaseAdapter {
         store.createIndex('status', 'status', { unique: false });
         store.createIndex('name', 'name', { unique: false });
         store.createIndex('email', 'email', { unique: false });
+      };
+    });
+  }
+
+  async deleteDatabase() {
+    return new Promise((resolve, reject) => {
+      // Close any existing connection first
+      if (this.db) {
+        this.db.close();
+        this.db = null;
+      }
+      
+      const deleteRequest = indexedDB.deleteDatabase(this.dbName);
+      
+      deleteRequest.onsuccess = () => {
+        console.log(`Database ${this.dbName} deleted successfully`);
+        resolve();
+      };
+      
+      deleteRequest.onerror = () => {
+        console.warn(`Failed to delete database ${this.dbName}:`, deleteRequest.error);
+        // Continue anyway - the error might be that the database doesn't exist
+        resolve();
+      };
+      
+      deleteRequest.onblocked = () => {
+        console.warn(`Database ${this.dbName} deletion blocked - continuing anyway`);
+        // Force continue after a short delay
+        setTimeout(resolve, 1000);
       };
     });
   }

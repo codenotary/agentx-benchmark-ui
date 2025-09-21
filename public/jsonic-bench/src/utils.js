@@ -118,7 +118,16 @@ function formatConsole(results) {
   
   output += `📅 Date: ${results.metadata.timestamp}\n`;
   output += `🖥️  Platform: ${results.metadata.platform.browser} on ${results.metadata.platform.platform}\n`;
-  output += `⚙️  Config: ${JSON.stringify(results.metadata.config, null, 2)}\n\n`;
+  output += `⚙️  Config: ${JSON.stringify(results.metadata.config, null, 2)}\n`;
+  
+  // Show initialization failures if any
+  if (results.metadata.initializationFailures && results.metadata.initializationFailures.length > 0) {
+    output += `\n⚠️  INITIALIZATION FAILURES:\n`;
+    for (const failure of results.metadata.initializationFailures) {
+      output += `   ❌ ${failure.name}: ${failure.error}\n`;
+    }
+  }
+  output += '\n';
   
   for (const [testName, testResults] of Object.entries(results.tests)) {
     output += `\n🎯 ${testName.toUpperCase()} TEST\n`;
@@ -126,14 +135,26 @@ function formatConsole(results) {
     
     const table = [];
     for (const [dbName, dbResults] of Object.entries(testResults)) {
-      if (dbResults.stats) {
+      if (dbResults.error) {
         table.push({
           Database: dbName,
+          'Status': '❌ FAILED',
+          'Error': dbResults.error,
+          'Completed': `${dbResults.completedIterations || 0}/${dbResults.totalIterations || 0}`,
+          'Mean (ms)': 'N/A',
+          'Ops/sec': 'N/A'
+        });
+      } else if (dbResults.stats) {
+        const partialWarning = dbResults.completedIterations < dbResults.totalIterations ? ' ⚠️' : '';
+        table.push({
+          Database: dbName,
+          'Status': `✅ OK${partialWarning}`,
           'Mean (ms)': dbResults.stats.mean.toFixed(2),
           'StdDev': dbResults.stats.stdDev.toFixed(2),
           'Min': dbResults.stats.min.toFixed(2),
           'Max': dbResults.stats.max.toFixed(2),
-          'Ops/sec': dbResults.docsPerSecond || dbResults.queriesPerSecond || 'N/A'
+          'Ops/sec': dbResults.docsPerSecond || dbResults.queriesPerSecond || 'N/A',
+          'Completed': `${dbResults.completedIterations || dbResults.times?.length || 0}/${dbResults.totalIterations || 0}`
         });
       }
     }

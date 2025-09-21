@@ -44,6 +44,7 @@ export class BenchmarkRunner {
     };
     
     console.log('🚀 Initializing database adapters...');
+    const failures = [];
     
     for (const name of this.config.adapters) {
       if (adapterClasses[name]) {
@@ -53,10 +54,25 @@ export class BenchmarkRunner {
           this.adapters.set(name, adapter);
           console.log(`✅ ${adapter.name} initialized`);
         } catch (error) {
-          console.error(`❌ Failed to initialize ${name}:`, error);
+          console.error(`❌ Failed to initialize ${name}:`, error.message);
+          failures.push({ name, error: error.message });
         }
+      } else {
+        console.warn(`⚠️ Unknown adapter: ${name}`);
+        failures.push({ name, error: 'Unknown adapter type' });
       }
     }
+    
+    if (this.adapters.size === 0) {
+      throw new Error('No adapters could be initialized. Cannot run benchmarks.');
+    }
+    
+    if (failures.length > 0) {
+      console.warn(`⚠️ ${failures.length} adapter(s) failed to initialize but continuing with ${this.adapters.size} working adapter(s)`);
+      this.results.metadata.initializationFailures = failures;
+    }
+    
+    console.log(`📦 Successfully initialized ${this.adapters.size} adapter(s): ${Array.from(this.adapters.keys()).join(', ')}`);
   }
 
   /**
@@ -99,32 +115,58 @@ export class BenchmarkRunner {
     for (const [name, adapter] of this.adapters) {
       console.log(`  Testing ${name}...`);
       
-      const times = [];
-      
-      for (let i = 0; i < this.config.iterations + this.config.warmup; i++) {
-        // Clear data before each iteration
-        await adapter.clear();
+      try {
+        const times = [];
         
-        const start = performance.now();
-        
-        // Test bulk insert
-        await adapter.bulkInsert(testData.documents);
-        
-        const end = performance.now();
-        const duration = end - start;
-        
-        if (i >= this.config.warmup) {
-          times.push(duration);
+        for (let i = 0; i < this.config.iterations + this.config.warmup; i++) {
+          try {
+            // Clear data before each iteration
+            await adapter.clear();
+            
+            const start = performance.now();
+            
+            // Test bulk insert
+            await adapter.bulkInsert(testData.documents);
+            
+            const end = performance.now();
+            const duration = end - start;
+            
+            if (i >= this.config.warmup) {
+              times.push(duration);
+            }
+          } catch (iterationError) {
+            console.warn(`    ⚠️ Iteration ${i + 1} failed:`, iterationError.message);
+            // Continue to next iteration
+            continue;
+          }
         }
+        
+        if (times.length > 0) {
+          results[name] = {
+            times,
+            stats: calculateStats(times),
+            docsPerSecond: Math.round((testData.documents.length / (calculateStats(times).mean / 1000))),
+            completedIterations: times.length,
+            totalIterations: this.config.iterations
+          };
+          
+          console.log(`    Mean: ${results[name].stats.mean.toFixed(2)}ms | Docs/sec: ${results[name].docsPerSecond} | Completed: ${times.length}/${this.config.iterations}`);
+        } else {
+          results[name] = {
+            error: 'All iterations failed',
+            completedIterations: 0,
+            totalIterations: this.config.iterations
+          };
+          console.log(`    ❌ All iterations failed for ${name}`);
+        }
+      } catch (adapterError) {
+        console.error(`    ❌ Adapter ${name} failed completely:`, adapterError.message);
+        results[name] = {
+          error: adapterError.message,
+          completedIterations: 0,
+          totalIterations: this.config.iterations
+        };
       }
-      
-      results[name] = {
-        times,
-        stats: calculateStats(times),
-        docsPerSecond: Math.round((testData.documents.length / (calculateStats(times).mean / 1000)))
-      };
-      
-      console.log(`    Mean: ${results[name].stats.mean.toFixed(2)}ms | Docs/sec: ${results[name].docsPerSecond}`);
     }
     
     this.results.tests.insert = results;
@@ -136,14 +178,26 @@ export class BenchmarkRunner {
   async runQueryTest(testData) {
     const results = {};
     
-    // Prepare data
+    // Prepare data with error handling
+    const preparedAdapters = new Set();
     for (const [name, adapter] of this.adapters) {
-      await adapter.clear();
-      await adapter.bulkInsert(testData.documents);
-      
-      // Create index if supported
-      if (adapter.features.indexes) {
-        await adapter.createIndex('age', 'age');
+      try {
+        console.log(`  Preparing data for ${name}...`);
+        await adapter.clear();
+        await adapter.bulkInsert(testData.documents);
+        
+        // Create index if supported
+        if (adapter.features.indexes) {
+          await adapter.createIndex('age', 'age');
+        }
+        preparedAdapters.add(name);
+      } catch (error) {
+        console.error(`    ❌ Failed to prepare data for ${name}:`, error.message);
+        results[name] = {
+          error: `Data preparation failed: ${error.message}`,
+          completedIterations: 0,
+          totalIterations: this.config.iterations
+        };
       }
     }
     
@@ -157,33 +211,63 @@ export class BenchmarkRunner {
     ];
     
     for (const [name, adapter] of this.adapters) {
-      console.log(`  Testing ${name}...`);
-      
-      const times = [];
-      
-      for (let i = 0; i < this.config.iterations + this.config.warmup; i++) {
-        const start = performance.now();
-        
-        // Run all queries
-        for (const query of queries) {
-          await adapter.find(query, { limit: 100 });
-        }
-        
-        const end = performance.now();
-        const duration = end - start;
-        
-        if (i >= this.config.warmup) {
-          times.push(duration);
-        }
+      if (!preparedAdapters.has(name)) {
+        console.log(`  Skipping ${name} (preparation failed)`);
+        continue;
       }
       
-      results[name] = {
-        times,
-        stats: calculateStats(times),
-        queriesPerSecond: Math.round((queries.length / (calculateStats(times).mean / 1000)))
-      };
+      console.log(`  Testing ${name}...`);
       
-      console.log(`    Mean: ${results[name].stats.mean.toFixed(2)}ms | Queries/sec: ${results[name].queriesPerSecond}`);
+      try {
+        const times = [];
+        
+        for (let i = 0; i < this.config.iterations + this.config.warmup; i++) {
+          try {
+            const start = performance.now();
+            
+            // Run all queries
+            for (const query of queries) {
+              await adapter.find(query, { limit: 100 });
+            }
+            
+            const end = performance.now();
+            const duration = end - start;
+            
+            if (i >= this.config.warmup) {
+              times.push(duration);
+            }
+          } catch (iterationError) {
+            console.warn(`    ⚠️ Query iteration ${i + 1} failed:`, iterationError.message);
+            continue;
+          }
+        }
+        
+        if (times.length > 0) {
+          results[name] = {
+            times,
+            stats: calculateStats(times),
+            queriesPerSecond: Math.round((queries.length / (calculateStats(times).mean / 1000))),
+            completedIterations: times.length,
+            totalIterations: this.config.iterations
+          };
+          
+          console.log(`    Mean: ${results[name].stats.mean.toFixed(2)}ms | Queries/sec: ${results[name].queriesPerSecond} | Completed: ${times.length}/${this.config.iterations}`);
+        } else {
+          results[name] = {
+            error: 'All query iterations failed',
+            completedIterations: 0,
+            totalIterations: this.config.iterations
+          };
+          console.log(`    ❌ All query iterations failed for ${name}`);
+        }
+      } catch (adapterError) {
+        console.error(`    ❌ Adapter ${name} failed completely:`, adapterError.message);
+        results[name] = {
+          error: adapterError.message,
+          completedIterations: 0,
+          totalIterations: this.config.iterations
+        };
+      }
     }
     
     this.results.tests.query = results;
