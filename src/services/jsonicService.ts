@@ -116,6 +116,9 @@ class JsonicService {
   }
   
   private async performInitialization(): Promise<void> {
+    const initStartTime = performance.now();
+    console.log('[JSONIC] Starting initialization...');
+    
     try {
       // Build the correct URL for the ES module wrapper
       const baseUrl = import.meta.env.BASE_URL || '/';
@@ -123,11 +126,22 @@ class JsonicService {
       // Check if we're in a Web Worker (no window object)
       const isWorker = typeof window === 'undefined' && typeof self !== 'undefined';
       
-      // Use v3.1 wrapper with performance optimizations
+      // Check for lightweight mode via URL param or env var
+      const urlParams = new URLSearchParams(window.location.search);
+      const useLightweight = urlParams.get('lightweight') === 'true' || 
+                            import.meta.env.VITE_USE_LIGHTWEIGHT_JSONIC === 'true';
+      
+      // Use v3.1 wrapper with performance optimizations or lightweight v1
       let jsonicUrl: string;
       if (isWorker) {
         // In worker, use worker-safe wrapper
         jsonicUrl = `${baseUrl}jsonic-worker-wrapper.js`;
+      } else if (useLightweight) {
+        // Use original lightweight wrapper for comparison
+        console.log('[JSONIC] Using LIGHTWEIGHT v1 wrapper for faster init');
+        jsonicUrl = import.meta.env.DEV 
+          ? `${window.location.origin}/jsonic-wrapper.esm.js`
+          : `${baseUrl}jsonic-wrapper.esm.js`;
       } else if (import.meta.env.DEV) {
         // In development, use absolute URL for v3.1 wrapper
         jsonicUrl = `${window.location.origin}/jsonic-wrapper-v3.esm.js`;
@@ -136,9 +150,13 @@ class JsonicService {
         jsonicUrl = `${baseUrl}jsonic-wrapper-v3.esm.js`;
       }
       
+      console.log('[JSONIC] Loading wrapper from:', jsonicUrl);
+      
       // Dynamically import the ES module
+      const moduleStartTime = performance.now();
       const module = await import(/* @vite-ignore */ jsonicUrl) as { default: JSONIC };
       this.jsonicModule = module.default;
+      console.log(`[JSONIC] Module loaded in ${(performance.now() - moduleStartTime).toFixed(2)}ms`);
       
       if (!this.jsonicModule) {
         throw new Error('JSONIC module not found');
@@ -158,9 +176,10 @@ class JsonicService {
         
       // Configure with v3.1 performance optimizations
       // Note: Set enablePersistence to false if you don't want to restore data on page refresh
+      const configStartTime = performance.now();
       this.jsonicModule.configure({
         wasmUrl,
-        debug: import.meta.env.DEV,
+        debug: true, // Enable debug mode to see what's happening
         enablePersistence: false, // Disabled to avoid reloading on every refresh
         persistenceKey: 'agentx_benchmark_db',
         cacheSize: 100, // LRU cache for query results
@@ -176,11 +195,13 @@ class JsonicService {
           'type': 'hash'
         }
       });
+      console.log(`[JSONIC] Configuration completed in ${(performance.now() - configStartTime).toFixed(2)}ms`);
       
       console.log('JSONIC version:', this.jsonicModule.version);
       console.log('WASM URL:', wasmUrl);
       console.log('Features: Query caching, Batch operations, Index optimization, OPFS persistence');
       
+      const dbCreateStartTime = performance.now();
       this.db = await this.jsonicModule.createDatabase({
         enablePersistence: false, // Disabled to avoid reloading on every refresh
         persistenceKey: 'agentx_benchmark_db',
@@ -195,14 +216,26 @@ class JsonicService {
           'agentId': 'hash',
           'type': 'hash'
         },
-        debug: import.meta.env.DEV
+        debug: true // Enable debug mode
       });
+      console.log(`[JSONIC] Database created in ${(performance.now() - dbCreateStartTime).toFixed(2)}ms`);
       console.log('JSONIC v3.1 database initialized with performance optimizations');
       
+      const statsStartTime = performance.now();
       const stats = await this.db.stats();
+      console.log(`[JSONIC] Stats retrieved in ${(performance.now() - statsStartTime).toFixed(2)}ms`);
       console.log('JSONIC stats:', stats);
+      
+      const totalInitTime = performance.now() - initStartTime;
+      console.log(`[JSONIC] Total initialization time: ${totalInitTime.toFixed(2)}ms`);
+      
+      // Log warning if initialization is slow
+      if (totalInitTime > 1000) {
+        console.warn(`[JSONIC] ⚠️ Slow initialization detected: ${totalInitTime.toFixed(2)}ms`);
+      }
     } catch (error) {
       console.error('Failed to initialize JSONIC:', error);
+      console.error(`[JSONIC] Failed after ${(performance.now() - initStartTime).toFixed(2)}ms`);
       throw error;
     }
   }
