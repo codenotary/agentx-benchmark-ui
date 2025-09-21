@@ -126,28 +126,35 @@ class JsonicService {
       // Check if we're in a Web Worker (no window object)
       const isWorker = typeof window === 'undefined' && typeof self !== 'undefined';
       
-      // Check for lightweight mode via URL param or env var
+      // Check for wrapper mode via URL param or env var
       const urlParams = new URLSearchParams(window.location.search);
-      const useLightweight = urlParams.get('lightweight') === 'true' || 
-                            import.meta.env.VITE_USE_LIGHTWEIGHT_JSONIC === 'true';
+      const wrapperMode = urlParams.get('wrapper') || 
+                         import.meta.env.VITE_JSONIC_WRAPPER || 
+                         'hybrid'; // Default to hybrid
       
-      // Use v3.1 wrapper with performance optimizations or lightweight v1
+      // Select wrapper based on mode
       let jsonicUrl: string;
       if (isWorker) {
         // In worker, use worker-safe wrapper
         jsonicUrl = `${baseUrl}jsonic-worker-wrapper.js`;
-      } else if (useLightweight) {
+      } else if (wrapperMode === 'lightweight' || wrapperMode === 'v1') {
         // Use original lightweight wrapper for comparison
         console.log('[JSONIC] Using LIGHTWEIGHT v1 wrapper for faster init');
         jsonicUrl = import.meta.env.DEV 
           ? `${window.location.origin}/jsonic-wrapper.esm.js`
           : `${baseUrl}jsonic-wrapper.esm.js`;
-      } else if (import.meta.env.DEV) {
-        // In development, use absolute URL for v3.1 wrapper
-        jsonicUrl = `${window.location.origin}/jsonic-wrapper-v3.esm.js`;
+      } else if (wrapperMode === 'v3') {
+        // Use full v3.1 wrapper with all features loaded
+        console.log('[JSONIC] Using FULL v3.1 wrapper with all features');
+        jsonicUrl = import.meta.env.DEV 
+          ? `${window.location.origin}/jsonic-wrapper-v3.esm.js`
+          : `${baseUrl}jsonic-wrapper-v3.esm.js`;
       } else {
-        // In production, use relative path for v3.1 wrapper
-        jsonicUrl = `${baseUrl}jsonic-wrapper-v3.esm.js`;
+        // Use new HYBRID wrapper - fast init with progressive loading
+        console.log('[JSONIC] Using HYBRID wrapper (v4) - fast init + progressive features');
+        jsonicUrl = import.meta.env.DEV 
+          ? `${window.location.origin}/jsonic-hybrid/index.js`
+          : `${baseUrl}jsonic-hybrid/index.js`;
       }
       
       console.log('[JSONIC] Loading wrapper from:', jsonicUrl);
@@ -174,27 +181,37 @@ class JsonicService {
           : `${baseUrl}jsonic_wasm_bg.wasm`;
       }
         
-      // Configure with v3.1 performance optimizations
-      // Note: Set enablePersistence to false if you don't want to restore data on page refresh
+      // Configure based on wrapper mode
       const configStartTime = performance.now();
-      this.jsonicModule.configure({
+      const config: any = {
         wasmUrl,
         debug: true, // Enable debug mode to see what's happening
         enablePersistence: false, // Disabled to avoid reloading on every refresh
-        persistenceKey: 'agentx_benchmark_db',
-        cacheSize: 100, // LRU cache for query results
-        enableQueryCache: true,
-        enableBatchOptimization: true,
-        memoryLimit: 100 * 1024 * 1024, // 100MB limit
-        indexHints: {
+        persistenceKey: 'agentx_benchmark_db'
+      };
+      
+      // Add v3/hybrid specific configs
+      if (wrapperMode === 'v3' || wrapperMode === 'hybrid') {
+        config.cacheSize = 100; // LRU cache for query results
+        config.enableQueryCache = true;
+        config.enableBatchOptimization = true;
+        config.memoryLimit = 100 * 1024 * 1024; // 100MB limit
+        config.indexHints = {
           // Add index hints for frequently queried fields
           'testId': 'hash',
           'timestamp': 'btree',
           'status': 'hash',
           'agentId': 'hash',
           'type': 'hash'
+        };
+        
+        // Hybrid-specific: preload commonly used features
+        if (wrapperMode === 'hybrid') {
+          config.preloadFeatures = ['cache', 'batch']; // Preload in background after init
         }
-      });
+      }
+      
+      this.jsonicModule.configure(config);
       console.log(`[JSONIC] Configuration completed in ${(performance.now() - configStartTime).toFixed(2)}ms`);
       
       console.log('JSONIC version:', this.jsonicModule.version);
