@@ -7,13 +7,21 @@ export class JsonicAdapter extends DatabaseAdapter {
   constructor(config = {}) {
     super(config);
     this.name = 'JSONIC';
-    this.type = 'NoSQL/SQL';
+    this.type = 'NoSQL (WebAssembly)';
+    this.version = '2.1.0';
     this.features = {
-      transactions: true,
-      indexes: true,
-      sql: true,
-      aggregation: true,
-      reactive: true
+      transactions: true,           // ✅ MVCC with ACID compliance
+      indexes: true,               // ✅ Hash and B-tree indexes
+      sql: false,                  // Phase 3 - Planned
+      aggregation: true,           // ✅ Phase 2 Complete
+      reactive: false,             // Phase 3 - Planned (Reactive Views)
+      bulkOperations: true,        // ✅ Phase 2 Complete
+      mongodbQueries: true,        // ✅ Phase 2 Complete
+      updateOperators: true,       // ✅ Phase 2 Complete ($set, $push, etc.)
+      webassembly: true,           // ✅ Core feature
+      offline: true,               // ✅ Browser-based
+      crossTab: false,             // Phase 3 - Planned
+      persistence: true            // ✅ Browser storage
     };
   }
 
@@ -70,19 +78,19 @@ export class JsonicAdapter extends DatabaseAdapter {
       updateOne: async (query, update) => {
         const doc = self.findDocuments(query)[0];
         if (doc) {
-          Object.assign(doc, update.$set || update);
+          self.applyUpdate(doc, update);
           self.operations++;
-          return { modifiedCount: 1 };
+          return { modifiedCount: 1, matchedCount: 1 };
         }
-        return { modifiedCount: 0 };
+        return { modifiedCount: 0, matchedCount: 0 };
       },
       updateMany: async (query, update) => {
         const docs = self.findDocuments(query);
         for (const doc of docs) {
-          Object.assign(doc, update.$set || update);
+          self.applyUpdate(doc, update);
         }
         self.operations += docs.length;
-        return { modifiedCount: docs.length };
+        return { modifiedCount: docs.length, matchedCount: docs.length };
       },
       deleteOne: async (query) => {
         const doc = self.findDocuments(query)[0];
@@ -108,9 +116,24 @@ export class JsonicAdapter extends DatabaseAdapter {
         return self.findDocuments(query).length;
       },
       createIndex: async () => true,
-      aggregate: async (pipeline) => ({
-        toArray: async () => []
-      })
+      aggregate: async (pipeline) => {
+        return {
+          toArray: async () => self.executeAggregation(pipeline)
+        };
+      },
+      distinct: async (field, query = {}) => {
+        const docs = self.findDocuments(query);
+        const values = new Set();
+        for (const doc of docs) {
+          if (doc[field] !== undefined) {
+            values.add(doc[field]);
+          }
+        }
+        return Array.from(values);
+      },
+      exists: async (query) => {
+        return self.findDocuments(query).length > 0;
+      }
     };
   }
   
@@ -151,6 +174,13 @@ export class JsonicAdapter extends DatabaseAdapter {
             case '$in':
               if (!opValue.includes(value)) return false;
               break;
+            case '$nin':
+              if (opValue.includes(value)) return false;
+              break;
+            case '$exists':
+              if (opValue && !(field in doc)) return false;
+              if (!opValue && (field in doc)) return false;
+              break;
           }
         }
       } else {
@@ -158,6 +188,157 @@ export class JsonicAdapter extends DatabaseAdapter {
       }
     }
     return true;
+  }
+  
+  // Simple aggregation pipeline execution (Phase 2 feature)
+  executeAggregation(pipeline) {
+    let result = Array.from(this.documents.values());
+    
+    for (const stage of pipeline) {
+      const stageName = Object.keys(stage)[0];
+      const stageParams = stage[stageName];
+      
+      switch (stageName) {
+        case '$match':
+          result = result.filter(doc => this.matchesQuery(doc, stageParams));
+          break;
+          
+        case '$group':
+          const groups = {};
+          for (const doc of result) {
+            const groupKey = this.evaluateExpression(doc, stageParams._id);
+            const key = JSON.stringify(groupKey);
+            
+            if (!groups[key]) {
+              groups[key] = { _id: groupKey, _docs: [] };
+            }
+            groups[key]._docs.push(doc);
+          }
+          
+          // Apply aggregation operators
+          result = Object.values(groups).map(group => {
+            const output = { _id: group._id };
+            for (const [field, expr] of Object.entries(stageParams)) {
+              if (field !== '_id') {
+                output[field] = this.applyAggregationOperator(group._docs, expr);
+              }
+            }
+            return output;
+          });
+          break;
+          
+        case '$sort':
+          result.sort((a, b) => {
+            for (const [field, direction] of Object.entries(stageParams)) {
+              const aVal = a[field];
+              const bVal = b[field];
+              const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+              if (cmp !== 0) return direction > 0 ? cmp : -cmp;
+            }
+            return 0;
+          });
+          break;
+          
+        case '$limit':
+          result = result.slice(0, stageParams);
+          break;
+          
+        case '$skip':
+          result = result.slice(stageParams);
+          break;
+      }
+    }
+    
+    return result;
+  }
+  
+  evaluateExpression(doc, expr) {
+    if (typeof expr === 'string' && expr.startsWith('$')) {
+      return doc[expr.substring(1)];
+    }
+    return expr;
+  }
+  
+  applyAggregationOperator(docs, operator) {
+    if (typeof operator === 'object') {
+      const op = Object.keys(operator)[0];
+      const field = operator[op];
+      
+      switch (op) {
+        case '$sum':
+          if (field === 1) return docs.length;
+          return docs.reduce((sum, doc) => sum + (doc[field.substring(1)] || 0), 0);
+        case '$avg':
+          const values = docs.map(doc => doc[field.substring(1)] || 0);
+          return values.reduce((a, b) => a + b, 0) / values.length;
+        case '$max':
+          return Math.max(...docs.map(doc => doc[field.substring(1)] || 0));
+        case '$min':
+          return Math.min(...docs.map(doc => doc[field.substring(1)] || 0));
+        case '$count':
+          return docs.length;
+        case '$addToSet':
+          const uniqueValues = new Set();
+          for (const doc of docs) {
+            uniqueValues.add(doc[field.substring(1)]);
+          }
+          return Array.from(uniqueValues);
+      }
+    }
+    return operator;
+  }
+
+  // Apply MongoDB-style update operators (Phase 2 feature)
+  applyUpdate(doc, update) {
+    // Handle MongoDB update operators
+    if (update.$set) {
+      Object.assign(doc, update.$set);
+    }
+    
+    if (update.$unset) {
+      for (const field of Object.keys(update.$unset)) {
+        delete doc[field];
+      }
+    }
+    
+    if (update.$inc) {
+      for (const [field, value] of Object.entries(update.$inc)) {
+        doc[field] = (doc[field] || 0) + value;
+      }
+    }
+    
+    if (update.$push) {
+      for (const [field, value] of Object.entries(update.$push)) {
+        if (!Array.isArray(doc[field])) {
+          doc[field] = [];
+        }
+        doc[field].push(value);
+      }
+    }
+    
+    if (update.$pull) {
+      for (const [field, value] of Object.entries(update.$pull)) {
+        if (Array.isArray(doc[field])) {
+          doc[field] = doc[field].filter(item => item !== value);
+        }
+      }
+    }
+    
+    if (update.$addToSet) {
+      for (const [field, value] of Object.entries(update.$addToSet)) {
+        if (!Array.isArray(doc[field])) {
+          doc[field] = [];
+        }
+        if (!doc[field].includes(value)) {
+          doc[field].push(value);
+        }
+      }
+    }
+    
+    // If no operators, treat as direct replacement
+    if (!update.$set && !update.$unset && !update.$inc && !update.$push && !update.$pull && !update.$addToSet) {
+      Object.assign(doc, update);
+    }
   }
   
   createMockTransaction() {

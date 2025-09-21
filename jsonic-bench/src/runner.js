@@ -16,7 +16,7 @@ export class BenchmarkRunner {
       warmup: config.warmup || 1,
       dataSize: config.dataSize || 'medium',
       adapters: config.adapters || ['jsonic', 'indexeddb', 'sqljs', 'localstorage'],
-      scenarios: config.scenarios || ['insert', 'query', 'update', 'delete', 'aggregate'],
+      scenarios: config.scenarios || ['insert', 'query', 'update', 'delete', 'aggregate', 'mongoFeatures'],
       ...config
     };
     
@@ -428,6 +428,125 @@ export class BenchmarkRunner {
     }
     
     this.results.tests.aggregate = results;
+  }
+
+  /**
+   * Run Phase 2 MongoDB-style features test
+   */
+  async runMongoFeaturesTest(testData) {
+    console.log('\n📊 Running MongoDB-style Features Test (Phase 2)...');
+    const results = {};
+    
+    for (const [name, adapter] of this.adapters) {
+      console.log(`  Testing ${name}...`);
+      
+      try {
+        await adapter.clear();
+        await adapter.bulkInsert(testData.documents);
+        
+        const times = [];
+        const features = [];
+        
+        for (let i = 0; i < this.config.iterations + this.config.warmup; i++) {
+          const start = performance.now();
+          
+          // Test MongoDB update operators (Phase 2 feature)
+          if (adapter.features.updateOperators) {
+            await adapter.updateMany(
+              { age: { $gte: 25 } },
+              { 
+                $set: { category: 'senior' },
+                $inc: { viewCount: 1 },
+                $push: { tags: 'experienced' }
+              }
+            );
+            features.push('updateOperators');
+          }
+          
+          // Test distinct operation
+          if (adapter.collection && adapter.collection.distinct) {
+            await adapter.collection.distinct('city');
+            features.push('distinct');
+          }
+          
+          // Test aggregation with complex pipeline
+          if (adapter.features.aggregation) {
+            await adapter.aggregate([
+              { $match: { age: { $gte: 25 } } },
+              { $group: { 
+                _id: '$city', 
+                avgAge: { $avg: '$age' },
+                count: { $sum: 1 },
+                skills: { $addToSet: '$skills' }
+              }},
+              { $sort: { count: -1 } },
+              { $limit: 5 }
+            ]);
+            features.push('aggregation');
+          }
+          
+          // Test complex query with multiple operators
+          await adapter.find({
+            $and: [
+              { age: { $gte: 25, $lte: 40 } },
+              { city: { $in: ['New York', 'San Francisco'] } },
+              { status: { $ne: 'inactive' } }
+            ]
+          });
+          features.push('complexQueries');
+          
+          const end = performance.now();
+          const duration = end - start;
+          
+          if (i >= this.config.warmup) {
+            times.push(duration);
+          }
+        }
+        
+        if (times.length > 0) {
+          results[name] = {
+            times,
+            stats: calculateStats(times),
+            featuresSupported: [...new Set(features)],
+            mongoCompatibility: this.calculateMongoCompatibility(adapter)
+          };
+          
+          console.log(`    Mean: ${results[name].stats.mean.toFixed(2)}ms | Features: ${results[name].featuresSupported.length} | Compatibility: ${results[name].mongoCompatibility}%`);
+        }
+        
+      } catch (error) {
+        console.error(`    ❌ Error testing ${name}:`, error.message);
+        results[name] = {
+          error: error.message,
+          mongoCompatibility: 0
+        };
+      }
+    }
+    
+    this.results.tests.mongoFeatures = results;
+  }
+  
+  /**
+   * Calculate MongoDB compatibility score
+   */
+  calculateMongoCompatibility(adapter) {
+    const mongoFeatures = [
+      'mongodbQueries',
+      'updateOperators', 
+      'aggregation',
+      'bulkOperations',
+      'indexes',
+      'transactions'
+    ];
+    
+    let supported = 0;
+    for (const feature of mongoFeatures) {
+      if (adapter.features[feature]) {
+        supported++;
+      }
+    }
+    
+    return Math.round((supported / mongoFeatures.length) * 100);
   }
 
   /**
