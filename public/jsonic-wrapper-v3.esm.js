@@ -258,12 +258,24 @@ class JsonicDatabase {
             const text = await file.text();
             const data = JSON.parse(text);
             
-            // Use batch insert for faster loading
-            if (data.documents?.length > 0) {
-                await this.insertMany(data.documents);
-            }
+            // IMPORTANT: Only load if database is empty to avoid duplicates
+            const currentStats = await this.db.stats();
+            const currentCount = typeof currentStats === 'string' ? 
+                JSON.parse(currentStats).data?.document_count : 
+                currentStats.data?.document_count || 0;
             
-            console.log(`[JSONIC v3.1] Loaded ${data.documents?.length || 0} documents from OPFS`);
+            if (currentCount === 0 && data.documents?.length > 0) {
+                // Use native WASM batch insert for faster loading
+                const jsonDocs = data.documents.map(doc => JSON.stringify(doc));
+                const result = await this.db.insert_many(jsonDocs);
+                const parsed = typeof result === 'string' ? JSON.parse(result) : result;
+                
+                console.log(`[JSONIC v3.1] Restored ${parsed.data?.length || 0} documents from persistent storage (OPFS)`);
+            } else if (currentCount > 0) {
+                console.log(`[JSONIC v3.1] Database already initialized with ${currentCount} documents`);
+            } else {
+                console.log(`[JSONIC v3.1] No persisted data found, starting with empty database`);
+            }
         } catch (error) {
             if (error.name !== 'NotFoundError') {
                 console.error('[JSONIC v3.1] Failed to load from OPFS:', error);
@@ -275,17 +287,14 @@ class JsonicDatabase {
         if (!this.opfsRoot) return;
         
         try {
-            const fileHandle = await this.opfsRoot.getFileHandle(`${this.persistenceKey}.wal`, { create: true });
+            // Save to main persistence file, not WAL
+            const fileHandle = await this.opfsRoot.getFileHandle(`${this.persistenceKey}.json`, { create: true });
             const writable = await fileHandle.createWritable();
             
-            // Write as WAL (Write-Ahead Log) for durability
-            const walEntry = {
-                timestamp: Date.now(),
-                operation: 'checkpoint',
-                data: await this.exportAll()
-            };
+            // Export all documents
+            const data = await this.exportAll();
             
-            await writable.write(JSON.stringify(walEntry) + '\n');
+            await writable.write(JSON.stringify(data));
             await writable.close();
         } catch (error) {
             console.error('[JSONIC v3.1] Failed to save to OPFS:', error);

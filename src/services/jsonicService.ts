@@ -157,10 +157,11 @@ class JsonicService {
       }
         
       // Configure with v3.1 performance optimizations
+      // Note: Set enablePersistence to false if you don't want to restore data on page refresh
       this.jsonicModule.configure({
         wasmUrl,
         debug: import.meta.env.DEV,
-        enablePersistence: true,
+        enablePersistence: false, // Disabled to avoid reloading on every refresh
         persistenceKey: 'agentx_benchmark_db',
         cacheSize: 100, // LRU cache for query results
         enableQueryCache: true,
@@ -181,7 +182,7 @@ class JsonicService {
       console.log('Features: Query caching, Batch operations, Index optimization, OPFS persistence');
       
       this.db = await this.jsonicModule.createDatabase({
-        enablePersistence: true,
+        enablePersistence: false, // Disabled to avoid reloading on every refresh
         persistenceKey: 'agentx_benchmark_db',
         cacheSize: 100,
         enableQueryCache: true,
