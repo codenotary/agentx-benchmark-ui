@@ -95,9 +95,16 @@ class JsonicService {
       }
       
       // Configure JSONIC with correct paths for both dev and production (GitHub Pages)
-      const wasmUrl = window.location.pathname.startsWith('/agentx-benchmark-ui/') 
-        ? '/agentx-benchmark-ui/jsonic_wasm_bg.wasm'
-        : `${baseUrl}jsonic_wasm_bg.wasm`;
+      let wasmUrl: string;
+      if (isWorker) {
+        // In worker, always use the GitHub Pages path
+        wasmUrl = '/agentx-benchmark-ui/jsonic_wasm_bg.wasm';
+      } else {
+        // In main thread, check the current path
+        wasmUrl = window.location.pathname.startsWith('/agentx-benchmark-ui/') 
+          ? '/agentx-benchmark-ui/jsonic_wasm_bg.wasm'
+          : `${baseUrl}jsonic_wasm_bg.wasm`;
+      }
         
       this.jsonicModule.configure({
         wasmUrl,
