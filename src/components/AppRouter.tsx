@@ -6,6 +6,7 @@ import Dashboard from './Dashboard';
 import JsonicBenchmark from './JsonicBenchmark';
 import LoadingOverlay from './LoadingOverlay';
 import { setMigrationProgressCallback } from '../services/api-jsonic';
+import { checkAndMigrateWorker } from '../services/workerMigration';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -38,37 +39,80 @@ export default function AppRouter() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
 
   useEffect(() => {
-    // Check if we're on the benchmark page - skip initialization
-    const path = window.location.pathname;
-    setCurrentPath(path);
-    
-    if (path.includes('/jsonic-bench')) {
-      setIsReady(true);
-      return;
-    }
-
-    // Set up progress callback for Web Worker migration
-    setMigrationProgressCallback((progress) => {
-      console.log('Worker migration progress:', progress);
-      setMigrationProgress(progress);
+    const initializeDatabase = async () => {
+      // Check if we're on the benchmark page - skip initialization
+      const path = window.location.pathname;
+      setCurrentPath(path);
       
-      if (progress.phase === 'complete') {
-        setTimeout(() => {
-          setIsReady(true);
-        }, 500);
-      } else if (progress.phase === 'error') {
-        console.error('Worker migration error:', progress.message);
+      if (path.includes('/jsonic-bench')) {
+        setIsReady(true);
+        return;
       }
-    });
 
-    // Start loading with Web Worker (works on mobile and desktop)
-    setMigrationProgress({
-      phase: 'checking',
-      current: 0,
-      total: 100,
-      message: 'Initializing database...',
-      percentage: 0
-    });
+      try {
+        // Set up progress callback for Web Worker migration
+        setMigrationProgressCallback((progress) => {
+          console.log('Worker migration progress:', progress);
+          setMigrationProgress(progress);
+          
+          if (progress.phase === 'complete') {
+            setTimeout(() => {
+              setIsReady(true);
+            }, 500);
+          } else if (progress.phase === 'error') {
+            console.error('Worker migration error:', progress.message);
+          }
+        });
+
+        // Start loading with Web Worker (works on mobile and desktop)
+        setMigrationProgress({
+          phase: 'checking',
+          current: 0,
+          total: 100,
+          message: 'Initializing database...',
+          percentage: 0
+        });
+
+        // Actually trigger the migration!
+        console.log('🚀 Starting database migration...');
+        const success = await checkAndMigrateWorker((progress) => {
+          console.log('Migration progress:', progress);
+          setMigrationProgress(progress);
+          
+          if (progress.phase === 'complete') {
+            setTimeout(() => {
+              setIsReady(true);
+            }, 500);
+          } else if (progress.phase === 'error') {
+            console.error('Migration error:', progress.message);
+          }
+        });
+
+        if (success) {
+          console.log('✅ Database migration completed successfully');
+        } else {
+          console.error('❌ Database migration failed');
+          setMigrationProgress({
+            phase: 'error',
+            current: 0,
+            total: 100,
+            message: 'Database initialization failed',
+            percentage: 0
+          });
+        }
+      } catch (error) {
+        console.error('❌ Failed to initialize database:', error);
+        setMigrationProgress({
+          phase: 'error',
+          current: 0,
+          total: 100,
+          message: 'Database initialization failed',
+          percentage: 0
+        });
+      }
+    };
+
+    initializeDatabase();
   }, []);
 
   // Use hash routing for GitHub Pages compatibility
