@@ -70,7 +70,37 @@ export async function fetchModelPerformanceJsonic(runId?: string): Promise<Model
     return perfData as ModelPerformance;
   });
   
-  return performances;
+  // Group by unique model+provider and aggregate data
+  const uniqueModels = new Map<string, ModelPerformance>();
+  
+  performances.forEach(perf => {
+    const key = `${perf.provider}-${perf.model}`;
+    const existing = uniqueModels.get(key);
+    
+    if (!existing) {
+      uniqueModels.set(key, perf);
+    } else {
+      // Aggregate data - take averages and sums where appropriate
+      uniqueModels.set(key, {
+        ...existing,
+        total_tests: existing.total_tests + perf.total_tests,
+        successful_tests: existing.successful_tests + perf.successful_tests,
+        failed_tests: existing.failed_tests + perf.failed_tests,
+        avg_ttft_ms: (existing.avg_ttft_ms + perf.avg_ttft_ms) / 2,
+        min_ttft_ms: Math.min(existing.min_ttft_ms, perf.min_ttft_ms),
+        max_ttft_ms: Math.max(existing.max_ttft_ms, perf.max_ttft_ms),
+        avg_total_time_ms: (existing.avg_total_time_ms + perf.avg_total_time_ms) / 2,
+        total_tokens_generated: existing.total_tokens_generated + perf.total_tokens_generated,
+        avg_tokens_per_second: (existing.avg_tokens_per_second + perf.avg_tokens_per_second) / 2,
+        avg_quality_score: (existing.avg_quality_score + perf.avg_quality_score) / 2,
+        cost_per_1k_tokens: perf.cost_per_1k_tokens, // Keep latest
+        success_rate: ((existing.successful_tests + perf.successful_tests) / 
+                      (existing.total_tests + perf.total_tests)) * 100
+      });
+    }
+  });
+  
+  return Array.from(uniqueModels.values());
 }
 
 export async function fetchTestResultsJsonic(runId: string): Promise<TestResult[]> {
