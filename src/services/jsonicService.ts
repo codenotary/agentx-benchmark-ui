@@ -70,10 +70,21 @@ class JsonicService {
       // Build the correct URL for the ES module wrapper
       const baseUrl = import.meta.env.BASE_URL || '/';
       
-      // In development, use absolute URL. In production, use relative path
-      const jsonicUrl = import.meta.env.DEV 
-        ? `${window.location.origin}/jsonic-wrapper.esm.js`
-        : `${baseUrl}jsonic-wrapper.esm.js`;
+      // Check if we're in a Web Worker (no window object)
+      const isWorker = typeof window === 'undefined' && typeof self !== 'undefined';
+      
+      // Use worker-safe wrapper in Web Workers
+      let jsonicUrl: string;
+      if (isWorker) {
+        // In worker, use worker-safe wrapper
+        jsonicUrl = `${baseUrl}jsonic-worker-wrapper.js`;
+      } else if (import.meta.env.DEV) {
+        // In development, use absolute URL
+        jsonicUrl = `${window.location.origin}/jsonic-wrapper.esm.js`;
+      } else {
+        // In production, use relative path
+        jsonicUrl = `${baseUrl}jsonic-wrapper.esm.js`;
+      }
       
       // Dynamically import the ES module
       const module = await import(/* @vite-ignore */ jsonicUrl) as { default: JSONIC };
