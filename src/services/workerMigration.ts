@@ -1,6 +1,9 @@
 // Web Worker-based migration service for mobile compatibility
 // This ensures JSONIC operations don't block the main UI thread
 
+// Import worker with Vite's special syntax
+import MigrationWorker from './migration.worker.ts?worker';
+
 interface MigrationProgress {
   phase: 'checking' | 'loading' | 'migrating' | 'complete' | 'error';
   current: number;
@@ -31,11 +34,9 @@ export function checkAndMigrateWorker(onProgress?: ProgressCallback): Promise<bo
     try {
       console.log('🚀 Creating JSONIC migration worker...');
       
-      // Create the worker - use dynamic import for production compatibility
-      const workerUrl = new URL('./migration.worker.ts', import.meta.url);
-      console.log('Worker URL:', workerUrl.href);
-      
-      worker = new Worker(workerUrl, { type: 'module' });
+      // Create the worker using the imported constructor
+      worker = new MigrationWorker();
+      console.log('Worker created successfully');
 
       worker.onmessage = (event) => {
         if (event.data.type === 'progress') {
