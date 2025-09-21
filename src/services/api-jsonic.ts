@@ -16,8 +16,8 @@ import {
   fetchStatsJsonic
 } from './jsonicApi';
 
-// Import migration utilities - use ultra-fast loader by default
-import { initializeUltraFast } from './ultraFastLoader';
+// Import migration utilities - use optimized migration for reliability
+import { checkAndMigrateOptimized } from './optimizedMigration';
 
 // Track initialization
 let initialized = false;
@@ -35,8 +35,8 @@ async function ensureInitialized() {
   
   // Ensure we only initialize once
   if (!initializationPromise) {
-    // Use ultra-fast loader by default
-    initializationPromise = initializeUltraFast(migrationProgressCallback);
+    // Use optimized migration for reliability
+    initializationPromise = checkAndMigrateOptimized(migrationProgressCallback);
   }
   
   const success = await initializationPromise;
