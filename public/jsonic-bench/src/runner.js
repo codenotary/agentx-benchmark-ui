@@ -16,7 +16,10 @@ export class BenchmarkRunner {
       warmup: config.warmup || 1,
       dataSize: config.dataSize || 'medium',
       adapters: config.adapters || ['jsonic', 'indexeddb', 'sqljs', 'localstorage'],
-      scenarios: config.scenarios || ['insert', 'query', 'update', 'delete', 'aggregate', 'mongoFeatures'],
+      scenarios: config.scenarios || [
+        'insert', 'query', 'update', 'delete', 'aggregate', 'mongoFeatures',
+        'sql', 'vectorSearch', 'reactive', 'networkSync', 'aiFeatures'
+      ],
       ...config
     };
     

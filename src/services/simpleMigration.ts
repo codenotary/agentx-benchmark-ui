@@ -1,15 +1,29 @@
 /**
- * Simple migration that runs data fetching in worker but stores in main thread
- * This avoids the data isolation issue between worker and main thread
+ * Optimized migration using batch inserts for high performance
+ * Uses JSONIC's native insert_many for bulk operations
  */
 
 import { jsonicService } from './jsonicService';
+
+// Declare the extended database interface with insert_many
+interface ExtendedDatabase {
+  insert(data: any): Promise<string>;
+  insert_many?(documents: string): Promise<string>; // WASM method for batch insert
+  get(id: string): Promise<any>;
+  update(id: string, data: any): Promise<boolean>;
+  delete(id: string): Promise<boolean>;
+  list(): Promise<string[]>;
+  stats(): Promise<any>;
+  query(filter: any, options?: any): Promise<any[]>;
+  find(filter?: any): any;
+  findOne(filter?: any): Promise<any>;
+}
 
 export async function performSimpleMigration(
   onProgress?: (progress: any) => void
 ): Promise<boolean> {
   try {
-    console.log('🚀 Starting simple migration...');
+    console.log('🚀 Starting optimized batch migration...');
     
     // Initialize JSONIC in main thread
     onProgress?.({
@@ -60,7 +74,7 @@ export async function performSimpleMigration(
       (jsonData.test_results?.length || 0) +
       (jsonData.performance_trends?.length || 0);
 
-    console.log(`Loading ${totalDocs} documents into JSONIC...`);
+    console.log(`Loading ${totalDocs} documents into JSONIC using batch insert...`);
     
     let processed = 0;
     
@@ -72,84 +86,145 @@ export async function performSimpleMigration(
       ...doc
     });
 
-    // Process benchmark runs
-    if (jsonData.benchmark_runs) {
+    // Get the raw database instance for batch operations
+    const db = await jsonicService.getDatabase() as ExtendedDatabase;
+    
+    // Process benchmark runs using batch insert
+    if (jsonData.benchmark_runs && jsonData.benchmark_runs.length > 0) {
       onProgress?.({
         phase: 'migrating',
         current: processed,
         total: totalDocs,
-        message: 'Loading benchmark runs...',
+        message: 'Batch loading benchmark runs...',
         percentage: 20
       });
 
-      for (const run of jsonData.benchmark_runs) {
-        await jsonicService.insert(addMetadata('benchmark_run', run));
-        processed++;
+      const benchmarkDocs = jsonData.benchmark_runs.map((run: any) => 
+        addMetadata('benchmark_run', run)
+      );
+      
+      // Use batch insert if available, otherwise fall back to parallel inserts
+      if (db.insert_many) {
+        const result = await db.insert_many(JSON.stringify(benchmarkDocs));
+        // Handle both string and object responses
+        const parsed = typeof result === 'string' ? JSON.parse(result) : result;
+        if (parsed.success || parsed.data) {
+          processed += benchmarkDocs.length;
+          console.log(`Batch loaded ${benchmarkDocs.length} benchmark runs`);
+        }
+      } else {
+        // Fallback to parallel inserts
+        const promises = benchmarkDocs.map((doc: any) => jsonicService.insert(doc));
+        await Promise.all(promises);
+        processed += benchmarkDocs.length;
+        console.log(`Loaded ${benchmarkDocs.length} benchmark runs in parallel`);
       }
-      console.log(`Loaded ${jsonData.benchmark_runs.length} benchmark runs`);
     }
 
-    // Process model performance
-    if (jsonData.model_performance) {
+    // Process model performance using batch insert
+    if (jsonData.model_performance && jsonData.model_performance.length > 0) {
       onProgress?.({
         phase: 'migrating',
         current: processed,
         total: totalDocs,
-        message: 'Loading model performance...',
+        message: 'Batch loading model performance...',
         percentage: 40
       });
 
-      for (const perf of jsonData.model_performance) {
-        await jsonicService.insert(addMetadata('model_performance', perf, perf.run_id));
-        processed++;
+      const perfDocs = jsonData.model_performance.map((perf: any) => 
+        addMetadata('model_performance', perf, perf.run_id)
+      );
+      
+      if (db.insert_many) {
+        const result = await db.insert_many(JSON.stringify(perfDocs));
+        // Handle both string and object responses
+        const parsed = typeof result === 'string' ? JSON.parse(result) : result;
+        if (parsed.success || parsed.data) {
+          processed += perfDocs.length;
+          console.log(`Batch loaded ${perfDocs.length} model performance records`);
+        }
+      } else {
+        const promises = perfDocs.map((doc: any) => jsonicService.insert(doc));
+        await Promise.all(promises);
+        processed += perfDocs.length;
+        console.log(`Loaded ${perfDocs.length} model performance records in parallel`);
       }
-      console.log(`Loaded ${jsonData.model_performance.length} model performance records`);
     }
 
-    // Process test results
-    if (jsonData.test_results) {
+    // Process test results using batch insert with chunking for large datasets
+    if (jsonData.test_results && jsonData.test_results.length > 0) {
       onProgress?.({
         phase: 'migrating',
         current: processed,
         total: totalDocs,
-        message: 'Loading test results...',
+        message: 'Batch loading test results...',
         percentage: 60
       });
 
-      for (const result of jsonData.test_results) {
-        await jsonicService.insert(addMetadata('test_result', result, result.run_id));
-        processed++;
+      const testDocs = jsonData.test_results.map((result: any) => 
+        addMetadata('test_result', result, result.run_id)
+      );
+      
+      // Process in chunks to avoid memory issues and provide progress updates
+      const chunkSize = 100;
+      for (let i = 0; i < testDocs.length; i += chunkSize) {
+        const chunk = testDocs.slice(i, Math.min(i + chunkSize, testDocs.length));
         
-        // Update progress every 50 documents
-        if (processed % 50 === 0) {
-          const percentage = 20 + (processed / totalDocs * 60);
-          onProgress?.({
-            phase: 'migrating',
-            current: processed,
-            total: totalDocs,
-            message: `Processing documents... (${processed}/${totalDocs})`,
-            percentage
-          });
+        if (db.insert_many) {
+          const result = await db.insert_many(JSON.stringify(chunk));
+          // Handle both string and object responses
+          const parsed = typeof result === 'string' ? JSON.parse(result) : result;
+          if (parsed.success || parsed.data) {
+            processed += chunk.length;
+          }
+        } else {
+          const promises = chunk.map((doc: any) => jsonicService.insert(doc));
+          await Promise.all(promises);
+          processed += chunk.length;
         }
+        
+        // Update progress
+        const percentage = 60 + ((processed - jsonData.benchmark_runs.length - jsonData.model_performance.length) / jsonData.test_results.length * 25);
+        onProgress?.({
+          phase: 'migrating',
+          current: processed,
+          total: totalDocs,
+          message: `Processing test results... (${processed}/${totalDocs})`,
+          percentage
+        });
       }
-      console.log(`Loaded ${jsonData.test_results.length} test results`);
+      
+      console.log(`Batch loaded ${testDocs.length} test results`);
     }
 
-    // Process performance trends
-    if (jsonData.performance_trends) {
+    // Process performance trends using batch insert
+    if (jsonData.performance_trends && jsonData.performance_trends.length > 0) {
       onProgress?.({
         phase: 'migrating',
         current: processed,
         total: totalDocs,
-        message: 'Loading performance trends...',
+        message: 'Batch loading performance trends...',
         percentage: 85
       });
 
-      for (const trend of jsonData.performance_trends) {
-        await jsonicService.insert(addMetadata('performance_trend', trend));
-        processed++;
+      const trendDocs = jsonData.performance_trends.map((trend: any) => 
+        addMetadata('performance_trend', trend)
+      );
+      
+      if (db.insert_many) {
+        const result = await db.insert_many(JSON.stringify(trendDocs));
+        // Handle both string and object responses
+        const parsed = typeof result === 'string' ? JSON.parse(result) : result;
+        if (parsed.success || parsed.data) {
+          processed += trendDocs.length;
+          console.log(`Batch loaded ${trendDocs.length} performance trends`);
+        }
+      } else {
+        const promises = trendDocs.map((doc: any) => jsonicService.insert(doc));
+        await Promise.all(promises);
+        processed += trendDocs.length;
+        console.log(`Loaded ${trendDocs.length} performance trends in parallel`);
       }
-      console.log(`Loaded ${jsonData.performance_trends.length} performance trends`);
     }
 
     // Verify the data

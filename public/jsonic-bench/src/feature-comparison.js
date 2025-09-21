@@ -22,6 +22,7 @@ export class FeatureComparison {
       { key: 'replication', name: '🔄 Replication & Sync', icon: '🔄' },
       { key: 'performance', name: '⚡ Performance', icon: '⚡' },
       { key: 'developer', name: '👩‍💻 Developer Experience', icon: '👩‍💻' },
+      { key: 'ai', name: '🤖 AI/LLM Integration', icon: '🤖' },
       { key: 'security', name: '🔒 Security', icon: '🔒' },
       { key: 'compatibility', name: '🌐 Compatibility', icon: '🌐' }
     ];

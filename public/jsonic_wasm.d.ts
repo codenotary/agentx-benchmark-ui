@@ -10,7 +10,7 @@ export function init(): void;
 export class JsonDB {
   free(): void;
   /**
-   * Creates a new database instance
+   * Creates a new database instance with automatic indexing
    */
   constructor();
   /**
@@ -22,13 +22,26 @@ export class JsonDB {
    */
   get(id: string): any;
   /**
+   * Insert multiple documents in a single batch operation
+   * This is much faster than calling insert() multiple times
+   */
+  insert_many(json_array_str: string): any;
+  /**
    * Update an existing document
    */
   update(id: string, json_str: string): any;
   /**
+   * Update multiple documents in a single batch operation
+   */
+  update_many(updates_json: string): any;
+  /**
    * Delete a document
    */
   delete(id: string): any;
+  /**
+   * Delete multiple documents in a single batch operation
+   */
+  delete_many(ids_json: string): any;
   /**
    * Get database statistics
    */
@@ -38,7 +51,7 @@ export class JsonDB {
    */
   list_ids(): any;
   /**
-   * Query documents using MongoDB-style queries
+   * Query documents using MongoDB-style queries with index optimization and caching
    */
   query(query_json: string): any;
   /**
@@ -248,8 +261,11 @@ export interface InitOutput {
   readonly jsondb_new: (a: number) => void;
   readonly jsondb_insert: (a: number, b: number, c: number, d: number) => void;
   readonly jsondb_get: (a: number, b: number, c: number, d: number) => void;
+  readonly jsondb_insert_many: (a: number, b: number, c: number, d: number) => void;
   readonly jsondb_update: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
+  readonly jsondb_update_many: (a: number, b: number, c: number, d: number) => void;
   readonly jsondb_delete: (a: number, b: number, c: number, d: number) => void;
+  readonly jsondb_delete_many: (a: number, b: number, c: number, d: number) => void;
   readonly jsondb_stats: (a: number, b: number) => void;
   readonly jsondb_list_ids: (a: number, b: number) => void;
   readonly jsondb_query: (a: number, b: number, c: number, d: number) => void;
@@ -302,10 +318,10 @@ export interface InitOutput {
   readonly wasmsharedbuffer_get_ptr: (a: number) => number;
   readonly wasmsharedbuffer_get_size: (a: number) => number;
   readonly wasmsharedbuffer_reset: (a: number) => void;
-  readonly __wbindgen_export_0: (a: number) => void;
-  readonly __wbindgen_export_1: (a: number, b: number, c: number) => void;
-  readonly __wbindgen_export_2: (a: number, b: number) => number;
-  readonly __wbindgen_export_3: (a: number, b: number, c: number, d: number) => number;
+  readonly __wbindgen_export_0: (a: number, b: number) => number;
+  readonly __wbindgen_export_1: (a: number, b: number, c: number, d: number) => number;
+  readonly __wbindgen_export_2: (a: number) => void;
+  readonly __wbindgen_export_3: (a: number, b: number, c: number) => void;
   readonly __wbindgen_export_4: WebAssembly.Table;
   readonly __wbindgen_add_to_stack_pointer: (a: number) => number;
   readonly __wbindgen_export_5: (a: number, b: number, c: number) => void;
