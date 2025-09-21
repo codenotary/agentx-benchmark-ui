@@ -6,7 +6,7 @@ import Dashboard from './Dashboard';
 import JsonicBenchmark from './JsonicBenchmark';
 import LoadingOverlay from './LoadingOverlay';
 import { setMigrationProgressCallback } from '../services/api-jsonic';
-import { checkAndMigrateWorker } from '../services/workerMigration';
+import { performSimpleMigration } from '../services/simpleMigration';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -73,9 +73,9 @@ export default function AppRouter() {
           percentage: 0
         });
 
-        // Actually trigger the migration!
+        // Use simple migration that stores in main thread
         console.log('🚀 Starting database migration...');
-        const success = await checkAndMigrateWorker((progress) => {
+        const success = await performSimpleMigration((progress) => {
           console.log('Migration progress:', progress);
           setMigrationProgress(progress);
           
