@@ -10,8 +10,9 @@ JSONIC v3.1 (Phase 3 Complete) represents a new category of browser-based databa
 |---------|-------------|-----------|--------|--------------|----------|
 | **Core Technology** | WebAssembly + Rust | Native Browser API | SQLite WASM | Native Browser API | IndexedDB Wrapper |
 | **Database Size** | ~996KB WASM | 0KB (native) | ~1.5MB WASM | 0KB (native) | ~45KB JS |
-| **Performance** | Near-native | Good | Good | Limited | Good |
-| **Query Language** | MongoDB-style | Key-based | SQL | Key-value | MongoDB-like |
+| **Feature Coverage** | **64%** (69/107) | 23% (25/107) | 36% (38/107) | 15% (16/107) | ~35% (estimated) |
+| **Performance** | Near-native + Caching | Good (native) | Good (WASM) | Limited | Good (wrapped) |
+| **Query Language** | **MongoDB + SQL** | Key-based | SQL | Key-value | MongoDB-like |
 | **Transaction Support** | ✅ ACID + MVCC | ✅ Basic | ✅ SQLite | ❌ None | ✅ Basic |
 | **Aggregation Pipeline** | ✅ Full support | ❌ Manual | ✅ SQL GROUP BY | ❌ None | ❌ Manual |
 | **Update Operators** | ✅ $set, $push, $inc | ❌ Manual | ✅ SQL UPDATE | ❌ Replace only | ❌ Manual |
@@ -20,9 +21,11 @@ JSONIC v3.1 (Phase 3 Complete) represents a new category of browser-based databa
 | **TypeScript Support** | ✅ First-class | ❌ Manual types | ❌ Manual types | ❌ Manual types | ✅ Built-in |
 | **Schema Validation** | ✅ Full support | ❌ None | ✅ SQL constraints | ❌ None | ❌ None |
 | **Real-time Sync** | ✅ WebSocket/WebRTC | ❌ Manual | ❌ Manual | ❌ Manual | ❌ Manual |
+| **Cross-tab Sync** | ✅ BroadcastChannel | ❌ None | ❌ None | ✅ Storage events | ❌ Manual |
 | **SQL Support** | ✅ Full SQL Engine | ❌ None | ✅ Native | ❌ None | ❌ None |
 | **AI/LLM Integration** | ✅ Vector search & RAG | ❌ None | ❌ None | ❌ None | ❌ None |
 | **Reactive Views** | ✅ LiveQuery | ❌ Manual | ❌ Manual | ❌ Manual | ❌ Manual |
+| **React/Vue Hooks** | ✅ Complete libraries | ❌ None | ❌ None | ❌ None | ❌ Limited |
 
 ## Performance Benchmarks (Typical Results)
 

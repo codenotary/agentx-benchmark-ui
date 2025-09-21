@@ -5,7 +5,7 @@
 export const FEATURE_MATRIX = {
   jsonic: {
     name: 'JSONIC',
-    version: '2.1.0',
+    version: '3.1.0',
     type: 'Hybrid NoSQL/SQL',
     features: {
       // Storage Features
@@ -18,34 +18,34 @@ export const FEATURE_MATRIX = {
         'OPFS Support': true,
         'Memory Mapped Files': false,
         'Compression': true,
-        'Encryption': false,
+        'Encryption': false, // TODO: Add field-level encryption
       },
       
       // Data Model
       dataModel: {
         'JSON Documents': true,
-        'Relational Tables': true,
+        'Relational Tables': true, // ✅ SQL Engine (Phase 3)
         'Key-Value Pairs': true,
-        'Graph Data': false,
-        'Time Series': false,
-        'Geospatial': false,
+        'Graph Data': false, // TODO: Future enhancement
+        'Time Series': false, // TODO: Future enhancement
+        'Geospatial': false, // TODO: Future enhancement
         'Binary Data': true,
-        'Schema Validation': true,
+        'Schema Validation': true, // ✅ Phase 3
         'Schema-less': true,
       },
       
       // Query Capabilities
       querying: {
-        'SQL Support': false, // Phase 3 - Planned
+        'SQL Support': true, // ✅ Full SQL Engine (Phase 3)
         'MongoDB-style Queries': true, // ✅ Phase 2 Complete
-        'Full-text Search': false, // Phase 3 - Planned
+        'Full-text Search': false, // TODO: Add to compete with SQL.js
         'Regex Search': true,
-        'Fuzzy Search': false,
-        'GraphQL': false,
+        'Fuzzy Search': false, // TODO: Competitive advantage opportunity
+        'GraphQL': false, // TODO: Major differentiator
         'Aggregation Pipeline': true, // ✅ Phase 2 Complete
-        'Map-Reduce': false,
-        'Stored Procedures': false,
-        'Views': false, // Phase 3 - Planned (Reactive Views)
+        'Map-Reduce': false, // TODO: No competitor has this
+        'Stored Procedures': false, // TODO: Enterprise feature
+        'Views': true, // ✅ ReactiveView (Phase 3)
       },
       
       // Indexing
@@ -78,44 +78,44 @@ export const FEATURE_MATRIX = {
       
       // Replication & Sync
       replication: {
-        'Master-Slave': false,
-        'Master-Master': false,
-        'Peer-to-Peer': false, // Phase 3 - Planned
-        'Cross-tab Sync': false, // Phase 3 - Planned
+        'Master-Slave': false, // TODO: Future enhancement
+        'Master-Master': false, // TODO: Future enhancement
+        'Peer-to-Peer': true, // ✅ WebRTC P2P (Phase 3)
+        'Cross-tab Sync': true, // ✅ BroadcastChannel (Phase 3)
         'Offline Support': true, // ✅ Core feature (browser-based)
-        'Conflict Resolution': false, // Phase 3 - Planned
-        'Change Streams': false, // Phase 3 - Planned (Reactive Views)
-        'Event Sourcing': false,
-        'CRDT Support': false,
-        'Sync Protocol': false, // Phase 3 - Planned
+        'Conflict Resolution': true, // ✅ Advanced CRDT support (Phase 3)
+        'Change Streams': true, // ✅ LiveQuery streams (Phase 3)
+        'Event Sourcing': false, // TODO: Future enhancement
+        'CRDT Support': true, // ✅ Conflict-free replicated data (Phase 3)
+        'Sync Protocol': 'WebSocket/HTTP/WebRTC', // ✅ Multiple protocols (Phase 3)
       },
       
       // Performance
       performance: {
         'Query Optimization': true,
-        'Query Caching': false, // Phase 3 - Planned
-        'Result Caching': false, // Phase 3 - Planned
-        'Connection Pooling': false,
-        'Lazy Loading': false, // Phase 3 - Planned
+        'Query Caching': true, // ✅ LRU Cache with 100 entries (v3.1)
+        'Result Caching': true, // ✅ Automatic invalidation (v3.1)
+        'Connection Pooling': false, // TODO: Multi-tab scenarios
+        'Lazy Loading': false, // TODO: Large datasets
         'Batch Operations': true, // ✅ Phase 2 Complete (insertMany, updateMany, deleteMany)
         'Bulk Insert': true, // ✅ Phase 2 Complete
-        'Streaming Results': false, // Phase 3 - Planned
-        'Parallel Queries': false, // Phase 3 - Planned
+        'Streaming Results': false, // TODO: Large result sets
+        'Parallel Queries': false, // TODO: WebAssembly advantage
         'WebAssembly': true, // ✅ Core feature
       },
       
       // Developer Experience
       developer: {
         'TypeScript Support': true, // ✅ Core feature
-        'React Hooks': false, // Phase 3 - Planned
-        'Vue Integration': false, // Phase 3 - Planned
-        'Observable Queries': false, // Phase 3 - Planned (Reactive Views)
-        'Migrations': false, // Phase 3 - Planned
-        'Debugging Tools': false, // Phase 3 - Planned
+        'React Hooks': true, // ✅ Complete hooks library (Phase 3)
+        'Vue Integration': true, // ✅ Vue 3 composables (Phase 3)
+        'Observable Queries': true, // ✅ LiveQuery/ReactiveView (Phase 3)
+        'Migrations': false, // TODO: Add to compete with SQL.js
+        'Debugging Tools': false, // TODO: Browser dev tools integration
         'Query Builder': true, // ✅ Phase 2 Complete (MongoDB-style fluent API)
         'ORM/ODM': true, // ✅ Phase 2 Complete (Collection API)
-        'REST API': false,
-        'GraphQL API': false,
+        'REST API': false, // TODO: Future enhancement
+        'GraphQL API': false, // TODO: Major differentiator
       },
       
       // Security
@@ -132,15 +132,29 @@ export const FEATURE_MATRIX = {
         'Data Masking': false,
       },
       
+      // AI/LLM Integration (Phase 3 - Unique to JSONIC)
+      ai: {
+        'Vector Search': true, // ✅ Embedding-based similarity search
+        'OpenAI Integration': true, // ✅ GPT models support
+        'Anthropic Integration': true, // ✅ Claude models support
+        'Local LLM Support': true, // ✅ ONNX runtime integration
+        'RAG Pipeline': true, // ✅ Retrieval-Augmented Generation
+        'Agent Memory': true, // ✅ Short/long-term, episodic, semantic
+        'Embedding Generation': true, // ✅ Multiple distance metrics
+        'Semantic Search': true, // ✅ Natural language queries
+        'AI-powered Queries': true, // ✅ Natural language to SQL/MongoDB
+        'Knowledge Graphs': false, // TODO: Future enhancement
+      },
+      
       // Compatibility
       compatibility: {
         'Chrome': true,
         'Firefox': true,
         'Safari': true,
         'Edge': true,
-        'Node.js': false,
-        'Deno': false,
-        'React Native': false,
+        'Node.js': false, // TODO: Future roadmap
+        'Deno': false, // TODO: Future roadmap
+        'React Native': false, // TODO: Future roadmap
         'Electron': true,
         'Web Workers': true,
         'Service Workers': true,
@@ -309,6 +323,20 @@ export const FEATURE_MATRIX = {
         'Field-level Encryption': false,
         'GDPR Compliance': false,
         'Data Masking': false,
+      },
+      
+      // AI/LLM Integration (None - JSONIC Exclusive)
+      ai: {
+        'Vector Search': false,
+        'OpenAI Integration': false,
+        'Anthropic Integration': false,
+        'Local LLM Support': false,
+        'RAG Pipeline': false,
+        'Agent Memory': false,
+        'Embedding Generation': false,
+        'Semantic Search': false,
+        'AI-powered Queries': false,
+        'Knowledge Graphs': false,
       },
       
       compatibility: {
@@ -482,6 +510,20 @@ export const FEATURE_MATRIX = {
         'Data Masking': false,
       },
       
+      // AI/LLM Integration (None - JSONIC Exclusive)
+      ai: {
+        'Vector Search': false,
+        'OpenAI Integration': false,
+        'Anthropic Integration': false,
+        'Local LLM Support': false,
+        'RAG Pipeline': false,
+        'Agent Memory': false,
+        'Embedding Generation': false,
+        'Semantic Search': false,
+        'AI-powered Queries': false,
+        'Knowledge Graphs': false,
+      },
+      
       compatibility: {
         'Chrome': true,
         'Firefox': true,
@@ -652,6 +694,20 @@ export const FEATURE_MATRIX = {
         'Data Masking': false,
       },
       
+      // AI/LLM Integration (None - JSONIC Exclusive)
+      ai: {
+        'Vector Search': false,
+        'OpenAI Integration': false,
+        'Anthropic Integration': false,
+        'Local LLM Support': false,
+        'RAG Pipeline': false,
+        'Agent Memory': false,
+        'Embedding Generation': false,
+        'Semantic Search': false,
+        'AI-powered Queries': false,
+        'Knowledge Graphs': false,
+      },
+      
       compatibility: {
         'Chrome': true,
         'Firefox': true,
@@ -757,12 +813,23 @@ export function getRecommendation(useCase) {
     'large-storage': ['indexeddb', 'jsonic'],
     'simple-storage': ['localstorage'],
     'offline-first': ['jsonic', 'indexeddb'],
-    'real-time': ['jsonic'],
-    'sql-required': ['jsonic', 'sqljs'],
+    'real-time': ['jsonic'], // JSONIC exclusive (WebSocket/WebRTC)
+    'sql-required': ['jsonic', 'sqljs'], // JSONIC now has full SQL
+    'mongodb-queries': ['jsonic'], // JSONIC exclusive
+    'dual-syntax': ['jsonic'], // JSONIC exclusive (MongoDB + SQL)
     'no-dependencies': ['localstorage', 'indexeddb'],
     'transactions': ['jsonic', 'indexeddb', 'sqljs'],
-    'cross-tab': ['jsonic', 'localstorage'],
-    'binary-data': ['indexeddb', 'jsonic', 'sqljs']
+    'cross-tab': ['jsonic', 'localstorage'], // JSONIC now supports this
+    'binary-data': ['indexeddb', 'jsonic', 'sqljs'],
+    'ai-integration': ['jsonic'], // JSONIC exclusive
+    'vector-search': ['jsonic'], // JSONIC exclusive
+    'reactive-views': ['jsonic'], // JSONIC exclusive
+    'web-assembly': ['jsonic', 'sqljs'],
+    'typescript-first': ['jsonic'], // Best TypeScript support
+    'framework-integration': ['jsonic'], // React hooks + Vue composables
+    'collaborative-apps': ['jsonic'], // Real-time sync + conflict resolution
+    'pwa-development': ['jsonic'], // Offline-first + cross-tab sync
+    'enterprise-apps': ['jsonic', 'sqljs'], // ACID + security features
   };
   
   return recommendations[useCase] || ['jsonic'];
