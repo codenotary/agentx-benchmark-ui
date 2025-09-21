@@ -150,6 +150,23 @@ class JsonicDatabase {
         return parsed.data;
     }
     
+    async insert_many(documents) {
+        // Use JSONIC's native batch insert for maximum performance
+        const result = await this.db.insert_many(documents);
+        // Handle both object and string responses from WASM
+        const parsed = typeof result === 'string' ? JSON.parse(result) : result;
+        
+        if (CONFIG.debug) {
+            console.log('[JSONIC] Batch inserted documents:', parsed.data?.length || 0);
+        }
+        
+        if (parsed.success && this.enablePersistence) {
+            await this.saveToOPFS();
+        }
+        
+        return result; // Return raw result for compatibility
+    }
+    
     async get(id) {
         const result = await this.db.get(id);
         // Handle both object and string responses from WASM
