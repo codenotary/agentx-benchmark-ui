@@ -5,7 +5,7 @@
 export const FEATURE_MATRIX = {
   jsonic: {
     name: 'JSONIC',
-    version: '1.0.0',
+    version: '2.1.0',
     type: 'Hybrid NoSQL/SQL',
     features: {
       // Storage Features
@@ -36,16 +36,16 @@ export const FEATURE_MATRIX = {
       
       // Query Capabilities
       querying: {
-        'SQL Support': true,
-        'MongoDB-style Queries': true,
-        'Full-text Search': true,
+        'SQL Support': false, // Phase 3 - Planned
+        'MongoDB-style Queries': true, // ✅ Phase 2 Complete
+        'Full-text Search': false, // Phase 3 - Planned
         'Regex Search': true,
         'Fuzzy Search': false,
         'GraphQL': false,
-        'Aggregation Pipeline': true,
+        'Aggregation Pipeline': true, // ✅ Phase 2 Complete
         'Map-Reduce': false,
         'Stored Procedures': false,
-        'Views': true,
+        'Views': false, // Phase 3 - Planned (Reactive Views)
       },
       
       // Indexing
@@ -80,40 +80,40 @@ export const FEATURE_MATRIX = {
       replication: {
         'Master-Slave': false,
         'Master-Master': false,
-        'Peer-to-Peer': true,
-        'Cross-tab Sync': true,
-        'Offline Support': true,
-        'Conflict Resolution': true,
-        'Change Streams': true,
+        'Peer-to-Peer': false, // Phase 3 - Planned
+        'Cross-tab Sync': false, // Phase 3 - Planned
+        'Offline Support': true, // ✅ Core feature (browser-based)
+        'Conflict Resolution': false, // Phase 3 - Planned
+        'Change Streams': false, // Phase 3 - Planned (Reactive Views)
         'Event Sourcing': false,
         'CRDT Support': false,
-        'Sync Protocol': 'WebSocket',
+        'Sync Protocol': false, // Phase 3 - Planned
       },
       
       // Performance
       performance: {
         'Query Optimization': true,
-        'Query Caching': true,
-        'Result Caching': true,
+        'Query Caching': false, // Phase 3 - Planned
+        'Result Caching': false, // Phase 3 - Planned
         'Connection Pooling': false,
-        'Lazy Loading': true,
-        'Batch Operations': true,
-        'Bulk Insert': true,
-        'Streaming Results': true,
-        'Parallel Queries': true,
-        'WebAssembly': true,
+        'Lazy Loading': false, // Phase 3 - Planned
+        'Batch Operations': true, // ✅ Phase 2 Complete (insertMany, updateMany, deleteMany)
+        'Bulk Insert': true, // ✅ Phase 2 Complete
+        'Streaming Results': false, // Phase 3 - Planned
+        'Parallel Queries': false, // Phase 3 - Planned
+        'WebAssembly': true, // ✅ Core feature
       },
       
       // Developer Experience
       developer: {
-        'TypeScript Support': true,
-        'React Hooks': true,
-        'Vue Integration': true,
-        'Observable Queries': true,
-        'Migrations': true,
-        'Debugging Tools': true,
-        'Query Builder': true,
-        'ORM/ODM': true,
+        'TypeScript Support': true, // ✅ Core feature
+        'React Hooks': false, // Phase 3 - Planned
+        'Vue Integration': false, // Phase 3 - Planned
+        'Observable Queries': false, // Phase 3 - Planned (Reactive Views)
+        'Migrations': false, // Phase 3 - Planned
+        'Debugging Tools': false, // Phase 3 - Planned
+        'Query Builder': true, // ✅ Phase 2 Complete (MongoDB-style fluent API)
+        'ORM/ODM': true, // ✅ Phase 2 Complete (Collection API)
         'REST API': false,
         'GraphQL API': false,
       },
@@ -161,21 +161,23 @@ export const FEATURE_MATRIX = {
       },
     },
     pros: [
-      'WebAssembly performance',
-      'SQL and NoSQL support',
-      'ACID transactions',
-      'Rich query language',
-      'Cross-tab synchronization',
+      'WebAssembly performance (near-native speed)',
+      'MongoDB-style API (familiar for developers)', // ✅ Phase 2
+      'ACID transactions with MVCC',
+      'Rich aggregation pipeline', // ✅ Phase 2
+      'Bulk operations (insertMany, updateMany)', // ✅ Phase 2
       'TypeScript-first design',
-      'Reactive queries',
-      'MVCC concurrency control'
+      'Update operators ($set, $push, $inc)', // ✅ Phase 2
+      'Browser-native (no server required)',
+      'Offline-first architecture'
     ],
     cons: [
-      'Browser-only (no Node.js)',
-      '2GB practical limit',
-      'No built-in auth',
-      'Young ecosystem',
-      'Limited community'
+      'Browser-only (no Node.js support yet)',
+      '2GB practical storage limit',
+      'No built-in authentication',
+      'SQL layer planned (Phase 3)',
+      'Reactive views planned (Phase 3)',
+      'Cross-tab sync planned (Phase 3)'
     ],
     bestFor: [
       'Complex client-side applications',

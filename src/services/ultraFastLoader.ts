@@ -31,7 +31,7 @@ type ProgressCallback = (progress: LoadProgress) => void;
 
 // Cache key for version checking
 const VERSION_KEY = 'jsonic_db_version';
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_DURATION = 30 * 1000; // 30 seconds for debugging
 
 // Check if we have a valid cached database
 async function checkCachedDatabase(): Promise<boolean> {
@@ -47,10 +47,7 @@ async function checkCachedDatabase(): Promise<boolean> {
     // Consider cache valid if less than 5 minutes old
     if (age < CACHE_DURATION) {
       console.log(`Using cached database (age: ${Math.round(age / 1000)}s)`);
-      
-      // Check if JSONIC has data
-      const stats = await jsonicService.getStats();
-      return stats?.document_count > 0;
+      return true; // Trust the cache timestamp - don't check JSONIC stats yet
     }
     
     return false;
@@ -119,6 +116,9 @@ async function bulkInsert(documents: any[], batchSize: number = 100): Promise<vo
 export async function loadOptimizedDatabase(
   onProgress?: ProgressCallback
 ): Promise<boolean> {
+  const startTime = performance.now();
+  console.log('🚀 Starting ultra-fast database loader...');
+  
   try {
     // Step 1: Check cache
     onProgress?.({
@@ -130,20 +130,52 @@ export async function loadOptimizedDatabase(
     });
     
     // First check if we have valid cached data
+    console.log('⏰ Checking cache...');
+    const cacheCheckStart = performance.now();
     const hasCached = await checkCachedDatabase();
+    console.log(`⏰ Cache check took: ${(performance.now() - cacheCheckStart).toFixed(0)}ms`);
+    
     if (hasCached) {
-      onProgress?.({
-        phase: 'complete',
-        current: 100,
-        total: 100,
-        message: 'Database loaded from cache!',
-        percentage: 100
-      });
-      return true;
+      console.log('✅ Cache hit! Initializing JSONIC...');
+      const initStart = performance.now();
+      
+      // Initialize JSONIC to verify we actually have data
+      await jsonicService.initialize();
+      console.log(`⏰ JSONIC init took: ${(performance.now() - initStart).toFixed(0)}ms`);
+      
+      // Quick validation that we have data
+      try {
+        const statsStart = performance.now();
+        const stats = await jsonicService.getStats();
+        console.log(`⏰ Stats check took: ${(performance.now() - statsStart).toFixed(0)}ms`);
+        
+        if (stats?.document_count > 0) {
+          console.log(`✅ Cache validated: ${stats.document_count} documents found`);
+          console.log(`🎉 Total cached load time: ${(performance.now() - startTime).toFixed(0)}ms`);
+          
+          onProgress?.({
+            phase: 'complete',
+            current: 100,
+            total: 100,
+            message: 'Database loaded from cache!',
+            percentage: 100
+          });
+          return true;
+        } else {
+          console.log('❌ Cache validation failed: no documents found');
+        }
+      } catch (error) {
+        console.log('❌ Cache validation failed:', error);
+      }
+    } else {
+      console.log('❌ No valid cache found');
     }
     
     // Step 2: Try OPFS first
+    console.log('💾 Checking OPFS...');
+    const opfsStart = performance.now();
     let database = await loadFromOPFS();
+    console.log(`⏰ OPFS check took: ${(performance.now() - opfsStart).toFixed(0)}ms`);
     
     if (!database) {
       // Step 3: Download optimized database file
@@ -211,7 +243,10 @@ export async function loadOptimizedDatabase(
     }
     
     // Step 4: Initialize JSONIC
+    console.log('🔧 Initializing JSONIC for new database...');
+    const jsonicInitStart = performance.now();
     await jsonicService.initialize();
+    console.log(`⏰ JSONIC init took: ${(performance.now() - jsonicInitStart).toFixed(0)}ms`);
     
     // Step 5: Bulk insert all documents at once
     onProgress?.({
@@ -223,9 +258,11 @@ export async function loadOptimizedDatabase(
     });
     
     // Ultra-fast bulk insert
-    const startTime = performance.now();
+    console.log(`📥 Starting bulk insert of ${database.documents.length} documents...`);
+    const bulkInsertStart = performance.now();
     await bulkInsert(database.documents, 100);
-    const loadTime = performance.now() - startTime;
+    const loadTime = performance.now() - bulkInsertStart;
+    console.log(`⏰ Bulk insert took: ${loadTime.toFixed(0)}ms`);
     
     console.log(`Loaded ${database.documents.length} documents in ${loadTime.toFixed(0)}ms`);
     console.log(`Speed: ${(database.documents.length / (loadTime / 1000)).toFixed(0)} docs/sec`);
@@ -249,13 +286,14 @@ export async function loadOptimizedDatabase(
     return true;
     
   } catch (error) {
-    console.error('Failed to load database:', error);
+    console.error('❌ Ultra-fast loader failed:', error);
+    console.log('🔄 Falling back to optimized migration...');
     
     onProgress?.({
-      phase: 'error',
+      phase: 'loading',
       current: 0,
       total: 100,
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message: 'Falling back to standard loading...',
       percentage: 0
     });
     
@@ -271,6 +309,15 @@ export async function initializeUltraFast(
 ): Promise<boolean> {
   try {
     console.log('⚡ Ultra-fast database initialization...');
+    
+    // HOTFIX: For debugging, skip ultra-fast loader and use original migration
+    const BYPASS_ULTRA_FAST = localStorage.getItem('BYPASS_ULTRA_FAST') === 'true';
+    
+    if (BYPASS_ULTRA_FAST) {
+      console.log('🚧 BYPASSING ultra-fast loader - using original migration');
+      const { checkAndMigrateOptimized } = await import('./optimizedMigration');
+      return checkAndMigrateOptimized(onProgress as any);
+    }
     
     const success = await loadOptimizedDatabase(onProgress);
     
