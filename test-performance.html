@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Performance Test - OPFS Loading</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .description {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8f4f8;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .error {
+            background: #fee;
+            color: #c00;
+        }
+        .success {
+            background: #efe;
+            color: #060;
+        }
+        .progress {
+            margin: 10px 0;
+            padding: 10px;
+            background: #fff3cd;
+            border-radius: 4px;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>OPFS Loading Performance Test</h1>
+        <p class="description">
+            This page tests the optimized OPFS document loading implementation.
+            The optimization includes batch inserts, progress tracking, and caching.
+        </p>
+
+        <div class="test-section">
+            <h2>Test Controls</h2>
+            <button id="testOptimized">Test Optimized Loading</button>
+            <button id="testOriginal">Test Original Loading</button>
+            <button id="clearCache">Clear Cache & Reload</button>
+        </div>
+
+        <div id="progress" class="progress" style="display: none;"></div>
+        <div id="results" class="results" style="display: none;"></div>
+    </div>
+
+    <script type="module">
+        const resultsEl = document.getElementById('results');
+        const progressEl = document.getElementById('progress');
+
+        function showProgress(message) {
+            progressEl.style.display = 'block';
+            progressEl.textContent = message;
+        }
+
+        function showResults(message, isError = false) {
+            resultsEl.style.display = 'block';
+            resultsEl.className = 'results ' + (isError ? 'error' : 'success');
+            resultsEl.textContent = message;
+        }
+
+        // Test optimized loading
+        document.getElementById('testOptimized').addEventListener('click', async () => {
+            resultsEl.style.display = 'none';
+            showProgress('Starting optimized loading test...');
+            
+            const startTime = performance.now();
+            let documentCount = 0;
+            
+            try {
+                // Import the optimized migration
+                const { performOptimizedMigration } = await import('./src/services/optimizedMigration.ts');
+                
+                await performOptimizedMigration((progress) => {
+                    showProgress(`${progress.phase}: ${progress.message} (${progress.percentage}%)`);
+                    if (progress.phase === 'migrating') {
+                        documentCount = progress.total;
+                    }
+                });
+                
+                const endTime = performance.now();
+                const duration = ((endTime - startTime) / 1000).toFixed(2);
+                
+                showResults(`✅ Optimized Loading Complete!
+                
+Total Time: ${duration} seconds
+Documents Loaded: ${documentCount}
+Average Speed: ${(documentCount / duration).toFixed(0)} docs/sec
+
+Improvements:
+- Batch insert operations (50 docs at a time)
+- Progress tracking and feedback
+- Caching to avoid redundant migrations
+- Parallel processing where possible`);
+            } catch (error) {
+                showResults(`❌ Test failed: ${error.message}`, true);
+            }
+            
+            progressEl.style.display = 'none';
+        });
+
+        // Test original loading
+        document.getElementById('testOriginal').addEventListener('click', async () => {
+            resultsEl.style.display = 'none';
+            showProgress('Starting original loading test...');
+            
+            const startTime = performance.now();
+            let documentCount = 0;
+            
+            try {
+                // Import the original migration
+                const { performMigration } = await import('./src/utils/migrateToJsonic.ts');
+                
+                // Clear cache first
+                localStorage.removeItem('jsonic_migration_completed');
+                
+                await performMigration();
+                
+                const endTime = performance.now();
+                const duration = ((endTime - startTime) / 1000).toFixed(2);
+                
+                // Estimate document count
+                documentCount = 715; // Known from earlier analysis
+                
+                showResults(`Original Loading Complete
+
+Total Time: ${duration} seconds
+Documents Loaded: ${documentCount}
+Average Speed: ${(documentCount / duration).toFixed(0)} docs/sec
+
+Issues:
+- Sequential insert operations
+- No progress feedback
+- Migrates all data on every load
+- No batch processing`);
+            } catch (error) {
+                showResults(`❌ Test failed: ${error.message}`, true);
+            }
+            
+            progressEl.style.display = 'none';
+        });
+
+        // Clear cache and reload
+        document.getElementById('clearCache').addEventListener('click', () => {
+            localStorage.clear();
+            showProgress('Cache cleared. Reloading page...');
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

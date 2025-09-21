@@ -1,0 +1,30 @@
+{
+  "name": "jsonic-benchmarks",
+  "version": "1.0.0",
+  "description": "Performance benchmark suite for JSONIC database",
+  "type": "module",
+  "scripts": {
+    "start": "node server-simple.js",
+    "start:lan": "node server-simple.js",
+    "start:advanced": "node server.js",
+    "serve": "python3 -m http.server 8080 --bind 0.0.0.0",
+    "benchmark": "node run-benchmarks.js",
+    "benchmark:browser": "npm start"
+  },
+  "dependencies": {
+    "sql.js": "^1.8.0"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  },
+  "keywords": [
+    "benchmark",
+    "performance",
+    "database",
+    "wasm",
+    "indexeddb",
+    "sql"
+  ],
+  "author": "",
+  "license": "MIT"
+}

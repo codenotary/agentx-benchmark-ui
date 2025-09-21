@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JSONIC Performance Benchmarks</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    
+    .container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      max-width: 1200px;
+      width: 100%;
+      padding: 40px;
+    }
+    
+    h1 {
+      color: #2c3e50;
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .subtitle {
+      color: #7f8c8d;
+      margin-bottom: 30px;
+      font-size: 1.1em;
+    }
+    
+    .controls {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 30px;
+    }
+    
+    .control-group {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 600;
+      color: #495057;
+    }
+    
+    select, input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 2px solid #dee2e6;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+    
+    select:focus, input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    .checkbox-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    
+    .checkbox-group label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin: 0;
+    }
+    
+    input[type="checkbox"] {
+      width: auto;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    
+    button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+    }
+    
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .btn-secondary {
+      background: #e9ecef;
+      color: #495057;
+    }
+    
+    .btn-secondary:hover {
+      background: #dee2e6;
+    }
+    
+    .status {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    
+    .status.active {
+      display: block;
+    }
+    
+    .status.success {
+      background: #d4edda;
+      border-color: #28a745;
+    }
+    
+    .status.error {
+      background: #f8d7da;
+      border-color: #dc3545;
+    }
+    
+    .progress {
+      background: #e9ecef;
+      border-radius: 10px;
+      height: 10px;
+      margin-top: 10px;
+      overflow: hidden;
+    }
+    
+    .progress-bar {
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+      height: 100%;
+      width: 0;
+      transition: width 0.3s;
+      border-radius: 10px;
+    }
+    
+    .results {
+      display: none;
+    }
+    
+    .results.active {
+      display: block;
+    }
+    
+    .results-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    .export-buttons {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .export-buttons button {
+      padding: 8px 16px;
+      font-size: 14px;
+    }
+    
+    #resultsContent {
+      background: #f8f9fa;
+      border-radius: 10px;
+      padding: 20px;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+    
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .test-section {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    
+    th {
+      background: #667eea;
+      color: white;
+      padding: 10px;
+      text-align: left;
+    }
+    
+    td {
+      padding: 10px;
+      border-bottom: 1px solid #dee2e6;
+    }
+    
+    tr:hover {
+      background: #f8f9fa;
+    }
+    
+    .winner {
+      background: #d4edda !important;
+    }
+    
+    .logo {
+      width: 40px;
+      height: 40px;
+    }
+    
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #e9ecef;
+    }
+    
+    .tab {
+      padding: 12px 24px;
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      color: #6c757d;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .tab:hover {
+      color: #495057;
+    }
+    
+    .tab.active {
+      color: #667eea;
+      border-bottom-color: #667eea;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    /* Print Styles */
+    @media print {
+      /* Force exact color reproduction */
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+      }
+      
+      body {
+        background: white;
+        margin: 0;
+        padding: 0;
+        font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif;
+        font-size: 11pt;
+        line-height: 1.6;
+        color: #212529;
+      }
+      
+      .container {
+        box-shadow: none;
+        border-radius: 0;
+        padding: 0;
+        max-width: 100%;
+        margin: 0;
+      }
+      
+      /* Professional header styling */
+      h1 {
+        font-size: 28pt;
+        color: #1a1a2e;
+        border-bottom: 4px solid #667eea;
+        padding-bottom: 12px;
+        margin: 0 0 20px 0;
+        page-break-after: avoid;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+      }
+      
+      h1 span { /* Hide emojis */
+        display: none;
+      }
+      
+      .subtitle {
+        font-size: 12pt;
+        color: #6c757d;
+        font-style: italic;
+        margin-bottom: 30px;
+        border-left: 3px solid #667eea;
+        padding-left: 15px;
+      }
+      
+      h2 {
+        font-size: 18pt;
+        color: #2c3e50;
+        border-bottom: 2px solid #dee2e6;
+        padding-bottom: 8px;
+        margin: 30px 0 20px 0;
+        page-break-after: avoid;
+        font-weight: 600;
+      }
+      
+      h3 {
+        font-size: 14pt;
+        color: #495057;
+        margin: 25px 0 15px 0;
+        page-break-after: avoid;
+        font-weight: 600;
+        border-left: 3px solid #667eea;
+        padding-left: 10px;
+      }
+      
+      h4 {
+        font-size: 12pt;
+        color: #6c757d;
+        margin: 20px 0 10px 0;
+        page-break-after: avoid;
+        font-weight: 600;
+      }
+      
+      /* Hide all interactive elements */
+      .controls,
+      .tabs,
+      .export-buttons,
+      .btn-print,
+      .status,
+      .progress,
+      button,
+      .btn-run {
+        display: none !important;
+      }
+      
+      /* Show all tab contents with clear separation */
+      .tab-content {
+        display: block !important;
+        margin-bottom: 40px;
+        padding-top: 20px;
+      }
+      
+      .tab-content:not(:first-child) {
+        border-top: 4px solid #667eea;
+        page-break-before: always;
+        padding-top: 30px;
+      }
+      
+      /* Professional table styling */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+        font-size: 10pt;
+        page-break-inside: avoid;
+        border: 2px solid #dee2e6;
+        background: white;
+      }
+      
+      thead {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+      }
+      
+      th {
+        background: #667eea !important;
+        color: white !important;
+        padding: 12px 10px !important;
+        text-align: left;
+        font-weight: 700;
+        border-bottom: 2px solid #5a67d8;
+        font-size: 10pt;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+      }
+      
+      td {
+        padding: 10px !important;
+        border-bottom: 1px solid #e9ecef;
+        background: white !important;
+        color: #212529 !important;
+      }
+      
+      tbody tr:nth-child(even) td {
+        background: #f8f9fa !important;
+      }
+      
+      tbody tr:hover {
+        background: transparent !important;
+      }
+      
+      /* Highlight winners */
+      .winner td,
+      tr:first-child td {
+        background: #e7f5ff !important;
+        font-weight: 600;
+      }
+      
+      td:first-child strong {
+        color: #667eea !important;
+        font-weight: 700;
+      }
+      
+      /* Test sections formatting */
+      .test-section {
+        page-break-inside: avoid;
+        margin-bottom: 30px;
+        padding: 20px;
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        background: white;
+      }
+      
+      .test-meta {
+        background: #f8f9fa !important;
+        padding: 15px !important;
+        border-left: 4px solid #667eea;
+        margin-bottom: 20px;
+        font-size: 10pt;
+      }
+      
+      .test-meta p {
+        margin: 5px 0;
+      }
+      
+      .test-meta strong {
+        color: #495057;
+        margin-right: 8px;
+      }
+      
+      /* Feature comparison styling */
+      .feature-section {
+        background: white !important;
+        border: 2px solid #dee2e6;
+        padding: 20px !important;
+        margin-bottom: 25px;
+        page-break-inside: avoid;
+        box-shadow: none !important;
+      }
+      
+      .feature-section h2 {
+        color: #2c3e50;
+        margin-top: 0;
+      }
+      
+      .feature-section h3 {
+        color: #495057;
+        font-size: 12pt;
+      }
+      
+      /* Grid layouts for print */
+      .scores-grid,
+      .pros-cons-grid,
+      .use-cases-grid,
+      .recommendations-grid {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 20px !important;
+        margin: 20px 0;
+        page-break-inside: avoid;
+      }
+      
+      .score-card,
+      .pros-cons-card,
+      .use-case-card,
+      .recommendation-card {
+        border: 2px solid #dee2e6;
+        padding: 15px;
+        background: #f8f9fa !important;
+        page-break-inside: avoid;
+      }
+      
+      .score-card h3,
+      .pros-cons-card h3,
+      .use-case-card h3 {
+        color: #667eea !important;
+        margin-top: 0;
+        font-size: 13pt;
+      }
+      
+      /* Simplify score display */
+      .score-circle {
+        display: none !important;
+      }
+      
+      .score-value {
+        position: static !important;
+        display: block !important;
+        width: auto !important;
+        height: auto !important;
+        font-size: 20pt !important;
+        color: #667eea !important;
+        font-weight: 700;
+        margin: 10px 0;
+        background: none !important;
+      }
+      
+      .score-details {
+        font-size: 10pt;
+        color: #6c757d;
+      }
+      
+      .db-type {
+        font-size: 10pt;
+        color: #495057;
+        font-weight: 600;
+      }
+      
+      /* Feature comparison values */
+      .feature-table th {
+        font-size: 9pt !important;
+      }
+      
+      .feature-yes {
+        color: #28a745 !important;
+        font-size: 14pt !important;
+        font-weight: bold;
+      }
+      
+      .feature-no {
+        color: #dc3545 !important;
+        font-size: 14pt !important;
+      }
+      
+      .feature-text {
+        color: #6c757d !important;
+        font-size: 9pt;
+        font-style: italic;
+      }
+      
+      .feature-na {
+        color: #adb5bd !important;
+      }
+      
+      /* Pros and cons formatting */
+      .pros h4 {
+        color: #28a745 !important;
+        font-size: 11pt;
+        margin-bottom: 10px;
+      }
+      
+      .cons h4 {
+        color: #dc3545 !important;
+        font-size: 11pt;
+        margin-bottom: 10px;
+      }
+      
+      .pros ul,
+      .cons ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+      
+      .pros li,
+      .cons li {
+        margin: 5px 0;
+        font-size: 10pt;
+      }
+      
+      /* Use cases */
+      .use-case-list {
+        margin: 10px 0;
+        padding-left: 20px;
+      }
+      
+      .use-case-list li {
+        margin: 8px 0;
+        font-size: 10pt;
+        color: #495057;
+      }
+      
+      /* Recommendations */
+      .recommendation-card h4 {
+        font-size: 11pt;
+        color: #495057;
+        margin-bottom: 10px;
+        text-align: left;
+      }
+      
+      .recommended-dbs {
+        justify-content: flex-start !important;
+      }
+      
+      .db-badge {
+        display: inline-block !important;
+        padding: 5px 10px !important;
+        margin: 3px !important;
+        border-radius: 4px;
+        font-size: 9pt;
+        font-weight: 600;
+      }
+      
+      .db-badge.primary {
+        background: #667eea !important;
+        color: white !important;
+        border: 2px solid #5a67d8;
+      }
+      
+      .db-badge.secondary {
+        background: white !important;
+        color: #495057 !important;
+        border: 2px solid #dee2e6;
+      }
+      
+      /* Hide images and charts */
+      .chart-container,
+      .test-section img,
+      svg,
+      canvas {
+        display: none !important;
+      }
+      
+      /* Lists formatting */
+      ul {
+        margin: 10px 0 10px 25px;
+        padding: 0;
+      }
+      
+      li {
+        margin: 5px 0;
+        page-break-inside: avoid;
+        font-size: 10pt;
+      }
+      
+      /* Page setup */
+      @page {
+        size: letter;
+        margin: 0.75in;
+      }
+      
+      @page :first {
+        margin-top: 0.5in;
+      }
+      
+      /* Footer with page numbers */
+      @page {
+        @bottom-center {
+          content: "Page " counter(page) " | JSONIC Benchmark Report | " attr(data-date);
+          font-size: 9pt;
+          color: #6c757d;
+          font-style: italic;
+        }
+      }
+      
+      /* Prevent widows and orphans */
+      p, li, h1, h2, h3, h4 {
+        orphans: 3;
+        widows: 3;
+      }
+      
+      /* Ensure content doesn't get cut off */
+      .tab-content:last-child {
+        page-break-after: avoid;
+      }
+    }
+    
+    .btn-print {
+      background: #6c757d;
+      color: white;
+    }
+    
+    .btn-print:hover {
+      background: #5a6268;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>
+      <span>🚀</span>
+      JSONIC Performance Benchmarks
+    </h1>
+    <p class="subtitle">Compare JSONIC with other browser storage solutions</p>
+    
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('benchmarks')">⚡ Performance Benchmarks</button>
+      <button class="tab" onclick="switchTab('features')">📊 Feature Comparison</button>
+      <button class="tab" onclick="switchTab('recommendations')">💡 Recommendations</button>
+    </div>
+    
+    <div id="benchmarks-tab" class="tab-content active">
+    <div class="controls">
+      <div class="control-group">
+        <div>
+          <label for="dataSize">Dataset Size</label>
+          <select id="dataSize">
+            <option value="small">Small (1,000 docs)</option>
+            <option value="medium" selected>Medium (10,000 docs)</option>
+            <option value="large">Large (100,000 docs)</option>
+          </select>
+        </div>
+        
+        <div>
+          <label for="iterations">Iterations</label>
+          <input type="number" id="iterations" value="3" min="1" max="10">
+        </div>
+        
+        <div>
+          <label for="warmup">Warmup Runs</label>
+          <input type="number" id="warmup" value="1" min="0" max="5">
+        </div>
+      </div>
+      
+      <div>
+        <label>Databases to Test</label>
+        <div class="checkbox-group">
+          <label>
+            <input type="checkbox" value="jsonic" checked>
+            <span>JSONIC</span>
+          </label>
+          <label>
+            <input type="checkbox" value="indexeddb" checked>
+            <span>IndexedDB</span>
+          </label>
+          <label>
+            <input type="checkbox" value="sqljs" checked>
+            <span>SQL.js</span>
+          </label>
+          <label>
+            <input type="checkbox" value="localstorage" checked>
+            <span>LocalStorage</span>
+          </label>
+        </div>
+      </div>
+      
+      <div>
+        <label>Test Scenarios</label>
+        <div class="checkbox-group">
+          <label>
+            <input type="checkbox" value="insert" checked>
+            <span>Insert</span>
+          </label>
+          <label>
+            <input type="checkbox" value="query" checked>
+            <span>Query</span>
+          </label>
+          <label>
+            <input type="checkbox" value="update" checked>
+            <span>Update</span>
+          </label>
+          <label>
+            <input type="checkbox" value="delete" checked>
+            <span>Delete</span>
+          </label>
+          <label>
+            <input type="checkbox" value="aggregate">
+            <span>Aggregate</span>
+          </label>
+          <label>
+            <input type="checkbox" value="transaction">
+            <span>Transaction</span>
+          </label>
+          <label>
+            <input type="checkbox" value="memory">
+            <span>Memory</span>
+          </label>
+        </div>
+      </div>
+      
+      <div class="button-group">
+        <button id="runBtn" class="btn-primary">
+          <span>▶️</span>
+          Run Benchmarks
+        </button>
+        <button id="cancelBtn" class="btn-secondary" style="display: none;">
+          <span>⏹️</span>
+          Cancel
+        </button>
+      </div>
+    </div>
+    
+    <div id="status" class="status">
+      <div id="statusText">Ready to start benchmarks...</div>
+      <div class="progress">
+        <div id="progressBar" class="progress-bar"></div>
+      </div>
+    </div>
+    
+    <div id="results" class="results">
+      <div class="results-header">
+        <h2>📊 Results</h2>
+        <div class="export-buttons">
+          <button onclick="exportResults('json')" class="btn-secondary">
+            <span>💾</span>
+            Export JSON
+          </button>
+          <button onclick="exportResults('csv')" class="btn-secondary">
+            <span>📄</span>
+            Export CSV
+          </button>
+          <button onclick="exportResults('markdown')" class="btn-secondary">
+            <span>📝</span>
+            Export Markdown
+          </button>
+          <button onclick="printResults()" class="btn-print">
+            <span>🖨️</span>
+            Print Results
+          </button>
+        </div>
+      </div>
+      <div id="resultsContent"></div>
+    </div>
+    </div>
+    
+    <div id="features-tab" class="tab-content">
+      <div id="featuresContent">
+        <div style="text-align: center; padding: 40px; color: #6c757d;">
+          <h3>Loading feature comparison...</h3>
+        </div>
+      </div>
+    </div>
+    
+    <div id="recommendations-tab" class="tab-content">
+      <div id="recommendationsContent">
+        <div style="text-align: center; padding: 40px; color: #6c757d;">
+          <h3>Loading recommendations...</h3>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { BenchmarkRunner } from './src/runner.js';
+    import { FeatureComparison } from './src/feature-comparison.js';
+    import { FEATURE_MATRIX, getRecommendation } from './src/feature-matrix.js';
+    
+    let runner = null;
+    let isRunning = false;
+    
+    const runBtn = document.getElementById('runBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const status = document.getElementById('status');
+    const statusText = document.getElementById('statusText');
+    const progressBar = document.getElementById('progressBar');
+    const results = document.getElementById('results');
+    const resultsContent = document.getElementById('resultsContent');
+    
+    runBtn.addEventListener('click', async () => {
+      if (isRunning) return;
+      
+      // Get configuration
+      const config = {
+        dataSize: document.getElementById('dataSize').value,
+        iterations: parseInt(document.getElementById('iterations').value),
+        warmup: parseInt(document.getElementById('warmup').value),
+        adapters: Array.from(document.querySelectorAll('.checkbox-group input[type="checkbox"]:checked'))
+          .filter(cb => ['jsonic', 'indexeddb', 'sqljs', 'localstorage'].includes(cb.value))
+          .map(cb => cb.value),
+        scenarios: Array.from(document.querySelectorAll('.checkbox-group input[type="checkbox"]:checked'))
+          .filter(cb => ['insert', 'query', 'update', 'delete', 'aggregate', 'transaction', 'memory'].includes(cb.value))
+          .map(cb => cb.value)
+      };
+      
+      if (config.adapters.length === 0) {
+        alert('Please select at least one database to test');
+        return;
+      }
+      
+      if (config.scenarios.length === 0) {
+        alert('Please select at least one test scenario');
+        return;
+      }
+      
+      // Start benchmark
+      isRunning = true;
+      runBtn.disabled = true;
+      runBtn.innerHTML = '<span class="spinner"></span> Running...';
+      cancelBtn.style.display = 'inline-flex';
+      status.classList.add('active');
+      status.classList.remove('success', 'error');
+      results.classList.remove('active');
+      
+      statusText.textContent = 'Initializing benchmarks...';
+      progressBar.style.width = '0%';
+      
+      try {
+        runner = new BenchmarkRunner(config);
+        
+        // Update progress
+        let progress = 0;
+        const totalTests = config.scenarios.length * config.adapters.length;
+        let completedTests = 0;
+        
+        // Mock progress updates (in real implementation, runner would emit events)
+        const progressInterval = setInterval(() => {
+          if (progress < 90) {
+            progress += Math.random() * 10;
+            progressBar.style.width = `${Math.min(progress, 90)}%`;
+          }
+        }, 500);
+        
+        const benchmarkResults = await runner.run();
+        
+        clearInterval(progressInterval);
+        progressBar.style.width = '100%';
+        
+        // Display results
+        status.classList.add('success');
+        statusText.textContent = '✅ Benchmarks completed successfully!';
+        
+        // Show results
+        resultsContent.innerHTML = runner.exportResults('html');
+        results.classList.add('active');
+        
+        // Store results globally for export
+        window.benchmarkResults = benchmarkResults;
+        window.benchmarkRunner = runner;
+        
+      } catch (error) {
+        console.error('Benchmark error:', error);
+        status.classList.add('error');
+        statusText.textContent = `❌ Error: ${error.message}`;
+      } finally {
+        isRunning = false;
+        runBtn.disabled = false;
+        runBtn.innerHTML = '<span>▶️</span> Run Benchmarks';
+        cancelBtn.style.display = 'none';
+      }
+    });
+    
+    cancelBtn.addEventListener('click', () => {
+      if (runner) {
+        // In real implementation, runner would have a cancel method
+        console.log('Cancelling benchmarks...');
+      }
+      isRunning = false;
+      runBtn.disabled = false;
+      runBtn.innerHTML = '<span>▶️</span> Run Benchmarks';
+      cancelBtn.style.display = 'none';
+      status.classList.add('error');
+      statusText.textContent = 'Benchmarks cancelled';
+    });
+    
+    // Export functions
+    window.exportResults = function(format) {
+      if (!window.benchmarkRunner) {
+        alert('No results to export. Run benchmarks first.');
+        return;
+      }
+      
+      const data = window.benchmarkRunner.exportResults(format);
+      const blob = new Blob([data], { type: getMimeType(format) });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `jsonic-benchmark-${Date.now()}.${format}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+    
+    function getMimeType(format) {
+      switch (format) {
+        case 'json': return 'application/json';
+        case 'csv': return 'text/csv';
+        case 'markdown': return 'text/markdown';
+        case 'html': return 'text/html';
+        default: return 'text/plain';
+      }
+    }
+    
+    // SQL.js is now mocked in the adapter for standalone operation
+    
+    // Print functionality
+    window.printResults = function() {
+      // Temporarily show all tabs for printing
+      const tabs = document.querySelectorAll('.tab-content');
+      const originalDisplay = [];
+      
+      // Store original display states and show all
+      tabs.forEach((tab, index) => {
+        originalDisplay[index] = tab.style.display;
+        tab.style.display = 'block';
+      });
+      
+      // Add print-specific class to body
+      document.body.classList.add('printing');
+      
+      // Trigger print dialog
+      window.print();
+      
+      // Restore original display states after a short delay
+      setTimeout(() => {
+        tabs.forEach((tab, index) => {
+          tab.style.display = originalDisplay[index] || '';
+        });
+        document.body.classList.remove('printing');
+      }, 100);
+    };
+    
+    // Tab switching
+    window.switchTab = function(tabName) {
+      // Update tab buttons
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      event.target.classList.add('active');
+      
+      // Update tab content
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      document.getElementById(`${tabName}-tab`).classList.add('active');
+      
+      // Load content if needed
+      if (tabName === 'features' && !window.featuresLoaded) {
+        loadFeatureComparison();
+        window.featuresLoaded = true;
+      } else if (tabName === 'recommendations' && !window.recommendationsLoaded) {
+        loadRecommendations();
+        window.recommendationsLoaded = true;
+      }
+    };
+    
+    // Load feature comparison
+    function loadFeatureComparison() {
+      const comparison = new FeatureComparison();
+      const content = comparison.renderComparisonTable();
+      const styles = FeatureComparison.getStyles();
+      
+      // Add styles if not already added
+      if (!document.getElementById('feature-styles')) {
+        const styleElement = document.createElement('style');
+        styleElement.id = 'feature-styles';
+        styleElement.textContent = styles;
+        document.head.appendChild(styleElement);
+      }
+      
+      document.getElementById('featuresContent').innerHTML = content;
+    }
+    
+    // Load recommendations
+    function loadRecommendations() {
+      const useCases = [
+        { id: 'complex-queries', name: 'Complex Queries', desc: 'Need advanced querying capabilities with SQL or MongoDB-style queries' },
+        { id: 'large-storage', name: 'Large Storage', desc: 'Storing more than 10MB of data in the browser' },
+        { id: 'offline-first', name: 'Offline First', desc: 'Building PWAs that work seamlessly offline' },
+        { id: 'real-time', name: 'Real-time Sync', desc: 'Multiple tabs or windows need to stay in sync' },
+        { id: 'sql-required', name: 'SQL Required', desc: 'Existing SQL queries or need relational data model' },
+        { id: 'transactions', name: 'Transactions', desc: 'ACID compliance and data integrity are critical' },
+        { id: 'cross-tab', name: 'Cross-tab Sync', desc: 'Data changes need to propagate across browser tabs' },
+        { id: 'binary-data', name: 'Binary Data', desc: 'Storing images, files, or other binary content' },
+        { id: 'simple-storage', name: 'Simple Storage', desc: 'Just need basic key-value storage under 5MB' },
+        { id: 'no-dependencies', name: 'No Dependencies', desc: 'Want to avoid external libraries' }
+      ];
+      
+      let html = `
+        <div style="padding: 20px;">
+          <h2 style="color: #2c3e50; margin-bottom: 30px;">🎯 Database Recommendations by Use Case</h2>
+          
+          <div style="display: grid; gap: 20px;">
+      `;
+      
+      for (const useCase of useCases) {
+        const recommended = getRecommendation(useCase.id);
+        const primaryDb = recommended[0];
+        const dbInfo = FEATURE_MATRIX[primaryDb];
+        
+        html += `
+          <div style="background: #f8f9fa; padding: 25px; border-radius: 12px; border-left: 4px solid #667eea;">
+            <h3 style="color: #495057; margin-bottom: 10px;">${useCase.name}</h3>
+            <p style="color: #6c757d; margin-bottom: 15px;">${useCase.desc}</p>
+            
+            <div style="margin-bottom: 15px;">
+              <strong style="color: #495057;">Recommended:</strong>
+              <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
+                ${recommended.map((db, index) => `
+                  <div style="
+                    padding: 8px 16px;
+                    border-radius: 8px;
+                    ${index === 0 ? 
+                      'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;' : 
+                      'background: #e9ecef; color: #495057;'}
+                    font-weight: 600;
+                  ">
+                    ${FEATURE_MATRIX[db].name}
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+            
+            <div style="background: white; padding: 15px; border-radius: 8px; margin-top: 15px;">
+              <strong style="color: #667eea;">${dbInfo.name} Advantages:</strong>
+              <ul style="margin-top: 10px; padding-left: 20px; color: #495057;">
+                ${dbInfo.pros.slice(0, 3).map(pro => `<li style="padding: 3px 0;">${pro}</li>`).join('')}
+              </ul>
+            </div>
+          </div>
+        `;
+      }
+      
+      html += `
+          </div>
+          
+          <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 20px; margin-top: 30px;">
+            <h3 style="color: #856404; margin-bottom: 10px;">💡 Quick Decision Guide</h3>
+            <ul style="color: #856404; padding-left: 20px;">
+              <li style="padding: 5px 0;"><strong>Choose JSONIC</strong> if you need SQL queries, transactions, and reactive data in a single solution</li>
+              <li style="padding: 5px 0;"><strong>Choose IndexedDB</strong> if you need simple object storage with large capacity and no dependencies</li>
+              <li style="padding: 5px 0;"><strong>Choose SQL.js</strong> if you need full SQLite compatibility but don't need persistence</li>
+              <li style="padding: 5px 0;"><strong>Choose LocalStorage</strong> for simple configuration data under 5MB</li>
+            </ul>
+          </div>
+        </div>
+      `;
+      
+      document.getElementById('recommendationsContent').innerHTML = html;
+    }
+  </script>
+</body>
+</html>
