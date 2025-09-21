@@ -12,7 +12,11 @@ const copyJsonicPlugin = () => ({
       { src: 'public/jsonic-wrapper.esm.js', dest: 'dist/jsonic-wrapper.esm.js' },
       { src: 'public/jsonic_wasm.js', dest: 'dist/jsonic_wasm.js' },
       { src: 'public/jsonic_wasm_bg.wasm', dest: 'dist/jsonic_wasm_bg.wasm' },
-      { src: 'public/test-jsonic.html', dest: 'dist/test-jsonic.html' }
+      { src: 'public/test-jsonic.html', dest: 'dist/test-jsonic.html' },
+      // Copy optimized database files
+      { src: 'public/data/database.jsonic', dest: 'dist/data/database.jsonic' },
+      { src: 'public/data/database.jsonic.gz', dest: 'dist/data/database.jsonic.gz' },
+      // Note: jsonic-bench directory is copied separately below
     ]
     
     filesToCopy.forEach(({ src, dest }) => {
@@ -51,6 +55,37 @@ const copyJsonicPlugin = () => ({
           console.log(`Copied ${file} to dist/jsonic/`)
         }
       })
+    }
+    
+    // Copy jsonic-bench directory recursively
+    const benchSourceDir = path.resolve('public/jsonic-bench')
+    const benchDestDir = path.resolve('dist/jsonic-bench')
+    
+    if (fs.existsSync(benchSourceDir)) {
+      copyDirectoryRecursive(benchSourceDir, benchDestDir)
+      console.log(`Copied jsonic-bench directory to dist/`)
+    }
+    
+    function copyDirectoryRecursive(src: string, dest: string) {
+      if (!fs.existsSync(dest)) {
+        fs.mkdirSync(dest, { recursive: true })
+      }
+      
+      const entries = fs.readdirSync(src, { withFileTypes: true })
+      
+      for (const entry of entries) {
+        const srcPath = path.join(src, entry.name)
+        const destPath = path.join(dest, entry.name)
+        
+        // Skip node_modules for benchmark
+        if (entry.name === 'node_modules') continue
+        
+        if (entry.isDirectory()) {
+          copyDirectoryRecursive(srcPath, destPath)
+        } else {
+          fs.copyFileSync(srcPath, destPath)
+        }
+      }
     }
   }
 })

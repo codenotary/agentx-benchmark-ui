@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { 
   Activity, 
   Clock, 
@@ -7,7 +8,8 @@ import {
   CheckCircle,
   ChevronDown,
   ChevronUp,
-  FileText
+  FileText,
+  Zap
 } from 'lucide-react';
 import { 
   fetchBenchmarkRuns, 
@@ -84,8 +86,17 @@ export default function Dashboard() {
                 AgentX Benchmark Dashboard
               </h1>
             </div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              Last updated: {latestRun ? new Date(latestRun.timestamp).toLocaleString() : 'Never'}
+            <div className="flex items-center gap-4">
+              <Link 
+                to="/jsonic-bench"
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all shadow-md hover:shadow-lg"
+              >
+                <Zap className="h-4 w-4" />
+                <span className="font-medium">JSONIC Benchmarks</span>
+              </Link>
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                Last updated: {latestRun ? new Date(latestRun.timestamp).toLocaleString() : 'Never'}
+              </div>
             </div>
           </div>
         </div>

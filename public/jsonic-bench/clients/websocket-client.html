@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>WebSocket Benchmark Client</title>
+  <style>
+    body {
+      font-family: monospace;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+    .controls {
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+    }
+    #output {
+      background: #f4f4f4;
+      padding: 15px;
+      border-radius: 5px;
+      height: 400px;
+      overflow-y: auto;
+    }
+    .message {
+      margin: 5px 0;
+      padding: 5px;
+      background: white;
+      border-radius: 3px;
+    }
+    .error { background: #ffe6e6; }
+    .success { background: #e6ffe6; }
+    .progress { background: #e6f3ff; }
+  </style>
+</head>
+<body>
+  <h1>🔌 WebSocket Benchmark Client</h1>
+  
+  <div class="controls">
+    <button onclick="connect()">Connect</button>
+    <button onclick="disconnect()">Disconnect</button>
+    <button onclick="runBenchmark()">Run Benchmark</button>
+    <button onclick="getStatus()">Get Status</button>
+    <button onclick="clearOutput()">Clear</button>
+  </div>
+  
+  <div>
+    <label>
+      Data Size:
+      <select id="dataSize">
+        <option value="small">Small</option>
+        <option value="medium" selected>Medium</option>
+        <option value="large">Large</option>
+      </select>
+    </label>
+    <label>
+      Iterations:
+      <input type="number" id="iterations" value="3" min="1" max="10">
+    </label>
+  </div>
+  
+  <h3>Output:</h3>
+  <div id="output"></div>
+
+  <script>
+    let ws = null;
+    let sessionId = null;
+
+    function connect() {
+      if (ws) {
+        addMessage('Already connected', 'error');
+        return;
+      }
+
+      ws = new WebSocket('ws://localhost:3000');
+      
+      ws.onopen = () => {
+        addMessage('✅ Connected to benchmark server', 'success');
+      };
+      
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        handleMessage(data);
+      };
+      
+      ws.onerror = (error) => {
+        addMessage(`❌ WebSocket error: ${error}`, 'error');
+      };
+      
+      ws.onclose = () => {
+        addMessage('Disconnected from server');
+        ws = null;
+      };
+    }
+
+    function disconnect() {
+      if (ws) {
+        ws.close();
+        ws = null;
+      }
+    }
+
+    function runBenchmark() {
+      if (!ws) {
+        addMessage('Not connected. Click Connect first.', 'error');
+        return;
+      }
+
+      const config = {
+        dataSize: document.getElementById('dataSize').value,
+        iterations: parseInt(document.getElementById('iterations').value),
+        warmup: 1,
+        adapters: ['jsonic', 'indexeddb', 'localstorage'],
+        scenarios: ['insert', 'query', 'update']
+      };
+
+      ws.send(JSON.stringify({
+        action: 'run',
+        config
+      }));
+
+      addMessage('📊 Starting benchmark...', 'progress');
+    }
+
+    function getStatus() {
+      if (!ws) {
+        addMessage('Not connected', 'error');
+        return;
+      }
+
+      ws.send(JSON.stringify({
+        action: 'status'
+      }));
+    }
+
+    function handleMessage(data) {
+      switch (data.type) {
+        case 'started':
+          sessionId = data.sessionId;
+          addMessage(`Started benchmark session: ${sessionId}`, 'progress');
+          break;
+        
+        case 'progress':
+          addMessage(`Progress: ${data.message}`, 'progress');
+          break;
+        
+        case 'complete':
+          addMessage('✅ Benchmark completed!', 'success');
+          displayResults(data.summary);
+          break;
+        
+        case 'status':
+          addMessage(`Active sessions: ${data.sessions.length}`);
+          data.sessions.forEach(s => {
+            addMessage(`  - ${s.id}: ${s.status}`);
+          });
+          break;
+        
+        case 'error':
+          addMessage(`❌ Error: ${data.error}`, 'error');
+          break;
+        
+        default:
+          addMessage(JSON.stringify(data, null, 2));
+      }
+    }
+
+    function displayResults(summary) {
+      addMessage(`\n🏆 Winner: ${summary.winner}\n`, 'success');
+      
+      if (summary.rankings) {
+        Object.entries(summary.rankings).forEach(([test, rankings]) => {
+          addMessage(`\n${test}:`);
+          rankings.forEach(r => {
+            addMessage(`  ${r.database}: ${r.mean.toFixed(2)}ms (${r.relative.toFixed(2)}x)`);
+          });
+        });
+      }
+    }
+
+    function addMessage(text, className = '') {
+      const output = document.getElementById('output');
+      const message = document.createElement('div');
+      message.className = `message ${className}`;
+      message.textContent = text;
+      output.appendChild(message);
+      output.scrollTop = output.scrollHeight;
+    }
+
+    function clearOutput() {
+      document.getElementById('output').innerHTML = '';
+    }
+
+    // Auto-connect on load
+    window.addEventListener('load', () => {
+      setTimeout(connect, 500);
+    });
+  </script>
+</body>
+</html>

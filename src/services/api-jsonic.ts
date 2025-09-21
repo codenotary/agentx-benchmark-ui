@@ -16,16 +16,31 @@ import {
   fetchStatsJsonic
 } from './jsonicApi';
 
-// Import migration utilities
-import { checkAndMigrate } from '../utils/migrateToJsonic';
+// Import migration utilities - use ultra-fast loader by default
+import { initializeUltraFast } from './ultraFastLoader';
 
 // Track initialization
 let initialized = false;
+let initializationPromise: Promise<boolean> | null = null;
+
+// Progress callback for migration
+let migrationProgressCallback: ((progress: any) => void) | undefined;
+
+export function setMigrationProgressCallback(callback: (progress: any) => void) {
+  migrationProgressCallback = callback;
+}
 
 async function ensureInitialized() {
-  if (!initialized) {
-    // Check and perform migration if needed
-    await checkAndMigrate();
+  if (initialized) return;
+  
+  // Ensure we only initialize once
+  if (!initializationPromise) {
+    // Use ultra-fast loader by default
+    initializationPromise = initializeUltraFast(migrationProgressCallback);
+  }
+  
+  const success = await initializationPromise;
+  if (success) {
     initialized = true;
   }
 }
