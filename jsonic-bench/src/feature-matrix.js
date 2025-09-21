@@ -776,32 +776,109 @@ export function getFeatureComparison(category) {
 }
 
 /**
- * Calculate feature scores
+ * Calculate feature scores (excluding features with zero support across all databases)
  */
 export function calculateFeatureScores() {
-  const scores = {};
+  const databases = Object.keys(FEATURE_MATRIX);
+  const allFeatures = {};
   
+  // Collect all features and their support across databases
+  for (const [dbName, dbInfo] of Object.entries(FEATURE_MATRIX)) {
+    for (const [category, features] of Object.entries(dbInfo.features)) {
+      if (!allFeatures[category]) allFeatures[category] = {};
+      for (const [feature, support] of Object.entries(features)) {
+        if (typeof support === 'boolean') {
+          if (!allFeatures[category][feature]) {
+            allFeatures[category][feature] = {};
+          }
+          allFeatures[category][feature][dbName] = support;
+        }
+      }
+    }
+  }
+  
+  // Identify meaningful features (at least one database supports it)
+  const meaningfulFeatures = [];
+  for (const [category, features] of Object.entries(allFeatures)) {
+    for (const [feature, support] of Object.entries(features)) {
+      const supportCount = Object.values(support).filter(s => s === true).length;
+      if (supportCount > 0) {
+        meaningfulFeatures.push({ category, feature });
+      }
+    }
+  }
+  
+  // Calculate scores based only on meaningful features
+  const scores = {};
   for (const [db, info] of Object.entries(FEATURE_MATRIX)) {
-    let totalFeatures = 0;
     let supportedFeatures = 0;
     
-    for (const category of Object.values(info.features)) {
-      for (const [feature, supported] of Object.entries(category)) {
-        if (typeof supported === 'boolean') {
-          totalFeatures++;
-          if (supported) supportedFeatures++;
-        }
+    for (const { category, feature } of meaningfulFeatures) {
+      if (info.features[category] && info.features[category][feature] === true) {
+        supportedFeatures++;
       }
     }
     
     scores[db] = {
       supported: supportedFeatures,
-      total: totalFeatures,
-      percentage: Math.round((supportedFeatures / totalFeatures) * 100)
+      total: meaningfulFeatures.length,
+      percentage: Math.round((supportedFeatures / meaningfulFeatures.length) * 100),
+      excluded: getTotalFeatures(info) - meaningfulFeatures.length // How many non-differentiating features were excluded
     };
   }
   
   return scores;
+}
+
+/**
+ * Get total feature count including non-differentiating ones
+ */
+function getTotalFeatures(dbInfo) {
+  let total = 0;
+  for (const category of Object.values(dbInfo.features)) {
+    for (const [feature, supported] of Object.entries(category)) {
+      if (typeof supported === 'boolean') {
+        total++;
+      }
+    }
+  }
+  return total;
+}
+
+/**
+ * Get list of non-differentiating features (excluded from scoring)
+ */
+export function getNonDifferentiatingFeatures() {
+  const databases = Object.keys(FEATURE_MATRIX);
+  const allFeatures = {};
+  
+  // Collect all features
+  for (const [dbName, dbInfo] of Object.entries(FEATURE_MATRIX)) {
+    for (const [category, features] of Object.entries(dbInfo.features)) {
+      if (!allFeatures[category]) allFeatures[category] = {};
+      for (const [feature, support] of Object.entries(features)) {
+        if (typeof support === 'boolean') {
+          if (!allFeatures[category][feature]) {
+            allFeatures[category][feature] = {};
+          }
+          allFeatures[category][feature][dbName] = support;
+        }
+      }
+    }
+  }
+  
+  // Find features with zero support
+  const excluded = [];
+  for (const [category, features] of Object.entries(allFeatures)) {
+    for (const [feature, support] of Object.entries(features)) {
+      const supportCount = Object.values(support).filter(s => s === true).length;
+      if (supportCount === 0) {
+        excluded.push({ category, feature });
+      }
+    }
+  }
+  
+  return excluded;
 }
 
 /**
