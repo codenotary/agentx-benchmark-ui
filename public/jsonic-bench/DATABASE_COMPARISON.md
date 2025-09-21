@@ -6,11 +6,13 @@ JSONIC v3.1 (Phase 3 Complete) represents a new category of browser-based databa
 
 ## Feature Comparison Matrix
 
+> **Methodology Note**: Feature coverage percentages are calculated based on **meaningful features only** (75 features) - excluding 32 features where no database has support (e.g., Graph Data, Time Series, Authentication). This provides a more accurate competitive comparison.
+
 | Feature | JSONIC v3.1 | IndexedDB | SQL.js | LocalStorage | Dexie.js |
 |---------|-------------|-----------|--------|--------------|----------|
 | **Core Technology** | WebAssembly + Rust | Native Browser API | SQLite WASM | Native Browser API | IndexedDB Wrapper |
 | **Database Size** | ~996KB WASM | 0KB (native) | ~1.5MB WASM | 0KB (native) | ~45KB JS |
-| **Feature Coverage** | **64%** (69/107) | 23% (25/107) | 36% (38/107) | 15% (16/107) | ~35% (estimated) |
+| **Feature Coverage** | **92%** (69/75) | 33% (25/75) | 51% (38/75) | 21% (16/75) | ~47% (estimated) |
 | **Performance** | Near-native + Caching | Good (native) | Good (WASM) | Limited | Good (wrapped) |
 | **Query Language** | **MongoDB + SQL** | Key-based | SQL | Key-value | MongoDB-like |
 | **Transaction Support** | ✅ ACID + MVCC | ✅ Basic | ✅ SQLite | ❌ None | ✅ Basic |
