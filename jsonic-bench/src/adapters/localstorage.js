@@ -23,6 +23,9 @@ export class LocalStorageAdapter extends DatabaseAdapter {
   }
 
   async init() {
+    // Check available storage
+    this.checkStorageQuota();
+    
     // Initialize index and counter
     if (!localStorage.getItem(this.indexKey)) {
       localStorage.setItem(this.indexKey, JSON.stringify([]));
@@ -72,29 +75,90 @@ export class LocalStorageAdapter extends DatabaseAdapter {
   }
 
   async bulkInsert(docs) {
+    // Check if this would exceed reasonable size limits
+    const estimatedSize = this.estimateDataSize(docs);
+    const currentSize = this.getUsedStorage();
+    
+    if (currentSize + estimatedSize > 8 * 1024 * 1024) { // 8MB limit
+      throw new Error(`LocalStorage quota would be exceeded. Current: ${Math.round(currentSize/1024)}KB, Adding: ${Math.round(estimatedSize/1024)}KB. LocalStorage limit is ~5-10MB.`);
+    }
+    
     const ids = [];
     
     // Get current counter
     let counter = parseInt(localStorage.getItem(this.counterKey));
     const index = JSON.parse(localStorage.getItem(this.indexKey));
     
+    let successCount = 0;
+    
     for (const doc of docs) {
-      counter++;
-      doc._id = counter;
-      
-      // Store document
-      const docKey = `${this.dataKey}_${counter}`;
-      localStorage.setItem(docKey, JSON.stringify(doc));
-      
-      index.push(counter);
-      ids.push(counter);
+      try {
+        counter++;
+        doc._id = counter;
+        
+        // Store document
+        const docKey = `${this.dataKey}_${counter}`;
+        const docData = JSON.stringify(doc);
+        
+        // Try to store - this will throw QuotaExceededError if storage is full
+        localStorage.setItem(docKey, docData);
+        
+        index.push(counter);
+        ids.push(counter);
+        successCount++;
+        
+      } catch (error) {
+        if (error.name === 'QuotaExceededError') {
+          console.warn(`LocalStorage quota exceeded after ${successCount} documents. Total attempted: ${docs.length}`);
+          // Update what we managed to store
+          break;
+        } else {
+          throw error;
+        }
+      }
     }
     
-    // Update counter and index
-    localStorage.setItem(this.counterKey, counter.toString());
+    // Update counter and index with what we managed to store
+    localStorage.setItem(this.counterKey, (parseInt(localStorage.getItem(this.counterKey)) + successCount).toString());
     localStorage.setItem(this.indexKey, JSON.stringify(index));
     
+    if (successCount < docs.length) {
+      throw new Error(`LocalStorage quota exceeded. Only stored ${successCount} of ${docs.length} documents. Consider using a smaller dataset size for LocalStorage.`);
+    }
+    
     return ids;
+  }
+
+  checkStorageQuota() {
+    try {
+      const testKey = 'storage_test_' + Date.now();
+      const testData = 'x'.repeat(1024); // 1KB test
+      localStorage.setItem(testKey, testData);
+      localStorage.removeItem(testKey);
+    } catch (error) {
+      if (error.name === 'QuotaExceededError') {
+        throw new Error('LocalStorage is already full. Please clear browser storage or use a different adapter.');
+      }
+    }
+  }
+
+  estimateDataSize(docs) {
+    if (docs.length === 0) return 0;
+    
+    // Sample first document to estimate size
+    const sampleDoc = { ...docs[0], _id: 99999 };
+    const sampleSize = JSON.stringify(sampleDoc).length * 2; // UTF-16 encoding
+    return sampleSize * docs.length;
+  }
+
+  getUsedStorage() {
+    let total = 0;
+    for (let key in localStorage) {
+      if (localStorage.hasOwnProperty(key) && key.startsWith(this.prefix)) {
+        total += localStorage[key].length + key.length;
+      }
+    }
+    return total * 2; // UTF-16 encoding
   }
 
   async find(query, options = {}) {
