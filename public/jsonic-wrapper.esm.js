@@ -7,11 +7,24 @@ import init, { JsonDB } from './jsonic_wasm.js';
 
 // Configuration with GitHub Pages support
 const getBaseUrl = () => {
-    // Detect if running on GitHub Pages
-    const { pathname } = window.location;
-    if (pathname.startsWith('/agentx-benchmark-ui/')) {
-        return '/agentx-benchmark-ui/';
+    // Check if we're in a Web Worker context
+    if (typeof window === 'undefined' && typeof self !== 'undefined') {
+        // In a Web Worker, use the location from self
+        const url = self.location ? self.location.pathname : '/';
+        if (url.includes('/agentx-benchmark-ui/')) {
+            return '/agentx-benchmark-ui/';
+        }
+        return '/';
     }
+    
+    // In main thread, use window.location
+    if (typeof window !== 'undefined' && window.location) {
+        const { pathname } = window.location;
+        if (pathname.startsWith('/agentx-benchmark-ui/')) {
+            return '/agentx-benchmark-ui/';
+        }
+    }
+    
     return '/';
 };
 
