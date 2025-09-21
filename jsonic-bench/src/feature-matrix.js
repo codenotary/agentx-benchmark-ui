@@ -162,12 +162,15 @@ export const FEATURE_MATRIX = {
     },
     pros: [
       'WebAssembly performance (near-native speed)',
-      'MongoDB-style API (familiar for developers)', // ✅ Phase 2
+      'MongoDB + SQL dual syntax support', // ✅ Phase 3
       'ACID transactions with MVCC',
       'Rich aggregation pipeline', // ✅ Phase 2
       'Bulk operations (insertMany, updateMany)', // ✅ Phase 2
       'TypeScript-first design',
       'Update operators ($set, $push, $inc)', // ✅ Phase 2
+      'Real-time sync (WebSocket/WebRTC)', // ✅ Phase 3
+      'AI/LLM integration with vector search', // ✅ Phase 3
+      'Reactive views and cross-tab sync', // ✅ Phase 3
       'Browser-native (no server required)',
       'Offline-first architecture'
     ],
@@ -175,9 +178,9 @@ export const FEATURE_MATRIX = {
       'Browser-only (no Node.js support yet)',
       '2GB practical storage limit',
       'No built-in authentication',
-      'SQL layer planned (Phase 3)',
-      'Reactive views planned (Phase 3)',
-      'Cross-tab sync planned (Phase 3)'
+      'Larger WASM bundle size (~1MB)',
+      'Learning curve for advanced features',
+      'Relatively new (active development)'
     ],
     bestFor: [
       'Complex client-side applications',
