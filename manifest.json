@@ -4,18 +4,18 @@
   "description": "Real-time AI model performance monitoring and comparison dashboard",
   "icons": [
     {
-      "src": "/favicon.svg",
+      "src": "/agentx-benchmark-ui/favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml"
     },
     {
-      "src": "/agentx-logo.svg",
+      "src": "/agentx-benchmark-ui/agentx-logo.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "maskable"
     }
   ],
-  "start_url": "/",
+  "start_url": "/agentx-benchmark-ui/",
   "display": "standalone",
   "theme_color": "#2563eb",
   "background_color": "#ffffff"
