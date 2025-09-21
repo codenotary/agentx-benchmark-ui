@@ -1,13 +1,20 @@
 interface JsonicDatabase {
   insert(data: any): Promise<string>;
+  insertMany(documents: any[], options?: any): Promise<string[]>;
   get(id: string): Promise<any>;
   update(id: string, data: any): Promise<boolean>;
+  updateMany(filter: any, update: any, options?: any): Promise<UpdateResult>;
   delete(id: string): Promise<boolean>;
+  deleteMany(filter: any, options?: any): Promise<DeleteResult>;
   list(): Promise<string[]>;
   stats(): Promise<any>;
   query(filter: any, options?: QueryOptions): Promise<any[]>;
   find(filter?: any): QueryChainable;
   findOne(filter?: any): Promise<any>;
+  aggregate(pipeline: any[]): Promise<any[]>;
+  getDebugInfo(): DebugInfo;
+  clearCache(): void;
+  clearProfiler(): void;
 }
 
 interface QueryOptions {
@@ -17,6 +24,37 @@ interface QueryOptions {
   skip?: number;
 }
 
+interface UpdateResult {
+  matchedCount: number;
+  modifiedCount: number;
+}
+
+interface DeleteResult {
+  deletedCount: number;
+}
+
+interface DebugInfo {
+  cache: {
+    size: number;
+    maxSize: number;
+    hits: number;
+    misses: number;
+    hitRate: string;
+  };
+  profiler: any;
+  slowQueries: any[];
+  indexes: Array<{
+    field: string;
+    type: string;
+    entries: number;
+  }>;
+  memory: {
+    used: number;
+    limit: number;
+    percentage: string;
+  };
+}
+
 interface QueryChainable {
   sort(sortSpec: Record<string, number>): QueryChainable;
   limit(n: number): QueryChainable;
@@ -24,18 +62,30 @@ interface QueryChainable {
   project(projection: Record<string, boolean>): QueryChainable;
   exec(): Promise<any[]>;
   toArray(): Promise<any[]>;
+  count(): Promise<number>;
 }
 
 interface JSONIC {
   createDatabase(options?: { 
     enablePersistence?: boolean; 
     persistenceKey?: string;
+    cacheSize?: number;
+    enableQueryCache?: boolean;
+    enableBatchOptimization?: boolean;
+    memoryLimit?: number;
+    indexHints?: Record<string, string>;
+    debug?: boolean;
   }): Promise<JsonicDatabase>;
   configure(options: { 
     wasmUrl?: string; 
     debug?: boolean;
     enablePersistence?: boolean;
     persistenceKey?: string;
+    cacheSize?: number;
+    enableQueryCache?: boolean;
+    enableBatchOptimization?: boolean;
+    memoryLimit?: number;
+    indexHints?: Record<string, string>;
   }): void;
   version: string;
 }
@@ -73,17 +123,17 @@ class JsonicService {
       // Check if we're in a Web Worker (no window object)
       const isWorker = typeof window === 'undefined' && typeof self !== 'undefined';
       
-      // Use worker-safe wrapper in Web Workers
+      // Use v3.1 wrapper with performance optimizations
       let jsonicUrl: string;
       if (isWorker) {
         // In worker, use worker-safe wrapper
         jsonicUrl = `${baseUrl}jsonic-worker-wrapper.js`;
       } else if (import.meta.env.DEV) {
-        // In development, use absolute URL
-        jsonicUrl = `${window.location.origin}/jsonic-wrapper.esm.js`;
+        // In development, use absolute URL for v3.1 wrapper
+        jsonicUrl = `${window.location.origin}/jsonic-wrapper-v3.esm.js`;
       } else {
-        // In production, use relative path
-        jsonicUrl = `${baseUrl}jsonic-wrapper.esm.js`;
+        // In production, use relative path for v3.1 wrapper
+        jsonicUrl = `${baseUrl}jsonic-wrapper-v3.esm.js`;
       }
       
       // Dynamically import the ES module
@@ -106,21 +156,47 @@ class JsonicService {
           : `${baseUrl}jsonic_wasm_bg.wasm`;
       }
         
+      // Configure with v3.1 performance optimizations
       this.jsonicModule.configure({
         wasmUrl,
         debug: import.meta.env.DEV,
         enablePersistence: true,
-        persistenceKey: 'agentx_benchmark_db'
+        persistenceKey: 'agentx_benchmark_db',
+        cacheSize: 100, // LRU cache for query results
+        enableQueryCache: true,
+        enableBatchOptimization: true,
+        memoryLimit: 100 * 1024 * 1024, // 100MB limit
+        indexHints: {
+          // Add index hints for frequently queried fields
+          'testId': 'hash',
+          'timestamp': 'btree',
+          'status': 'hash',
+          'agentId': 'hash',
+          'type': 'hash'
+        }
       });
       
       console.log('JSONIC version:', this.jsonicModule.version);
       console.log('WASM URL:', wasmUrl);
+      console.log('Features: Query caching, Batch operations, Index optimization, OPFS persistence');
       
       this.db = await this.jsonicModule.createDatabase({
         enablePersistence: true,
-        persistenceKey: 'agentx_benchmark_db'
+        persistenceKey: 'agentx_benchmark_db',
+        cacheSize: 100,
+        enableQueryCache: true,
+        enableBatchOptimization: true,
+        memoryLimit: 100 * 1024 * 1024,
+        indexHints: {
+          'testId': 'hash',
+          'timestamp': 'btree',
+          'status': 'hash',
+          'agentId': 'hash',
+          'type': 'hash'
+        },
+        debug: import.meta.env.DEV
       });
-      console.log('JSONIC database initialized with MongoDB-like queries and OPFS persistence');
+      console.log('JSONIC v3.1 database initialized with performance optimizations');
       
       const stats = await this.db.stats();
       console.log('JSONIC stats:', stats);
@@ -231,6 +307,10 @@ class JsonicService {
       toArray: async function() {
         const db = await dbPromise;
         return db.find(filter).toArray();
+      },
+      count: async function() {
+        const db = await dbPromise;
+        return db.find(filter).count();
       }
     } as QueryChainable;
 
@@ -267,7 +347,78 @@ class JsonicService {
       return db.query(filter, queryOptions);
     };
     
+    chainable.count = async () => {
+      const db = await dbPromise;
+      return db.find(filter).count();
+    };
+    
     return chainable;
+  }
+
+  // Batch operations for v3.1 performance
+  async insertMany(documents: any[]): Promise<string[]> {
+    const db = await this.getDatabase();
+    return db.insertMany(documents);
+  }
+
+  async updateMany(filter: any, update: any): Promise<UpdateResult> {
+    const db = await this.getDatabase();
+    return db.updateMany(filter, update);
+  }
+
+  async deleteMany(filter: any): Promise<DeleteResult> {
+    const db = await this.getDatabase();
+    return db.deleteMany(filter);
+  }
+
+  // Aggregation pipeline for analytics
+  async aggregate(pipeline: any[]): Promise<any[]> {
+    const db = await this.getDatabase();
+    return db.aggregate(pipeline);
+  }
+
+  // Debug and performance monitoring
+  async getDebugInfo(): Promise<DebugInfo> {
+    const db = await this.getDatabase();
+    return db.getDebugInfo();
+  }
+
+  async clearCache(): Promise<void> {
+    const db = await this.getDatabase();
+    db.clearCache();
+  }
+
+  async clearProfiler(): Promise<void> {
+    const db = await this.getDatabase();
+    db.clearProfiler();
+  }
+
+  // Helper method for benchmark statistics using aggregation
+  async getBenchmarkStats(testId?: string): Promise<any> {
+    const pipeline: any[] = [];
+    
+    if (testId) {
+      pipeline.push({ $match: { testId } });
+    }
+    
+    pipeline.push(
+      {
+        $group: {
+          _id: '$testId',
+          avgDuration: { $avg: '$duration' },
+          minDuration: { $min: '$duration' },
+          maxDuration: { $max: '$duration' },
+          totalRuns: { $sum: 1 },
+          successCount: { $sum: { $cond: [{ $eq: ['$status', 'success'] }, 1, 0] } },
+          failureCount: { $sum: { $cond: [{ $eq: ['$status', 'failure'] }, 1, 0] } }
+        }
+      },
+      {
+        $sort: { totalRuns: -1 }
+      }
+    );
+    
+    return this.aggregate(pipeline);
   }
 }
 
