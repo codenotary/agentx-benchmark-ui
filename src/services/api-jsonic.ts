@@ -16,8 +16,8 @@ import {
   fetchStatsJsonic
 } from './jsonicApi';
 
-// Import migration utilities - use mobile-optimized migration
-import { checkAndMigrateMobile } from './mobileMigration';
+// Import migration utilities - use Web Worker for mobile compatibility
+import { checkAndMigrateWorker } from './workerMigration';
 
 // Track initialization
 let initialized = false;
@@ -35,8 +35,8 @@ async function ensureInitialized() {
   
   // Ensure we only initialize once
   if (!initializationPromise) {
-    // Use mobile-optimized migration with device detection
-    initializationPromise = checkAndMigrateMobile(migrationProgressCallback);
+    // Use Web Worker migration for mobile and desktop compatibility
+    initializationPromise = checkAndMigrateWorker(migrationProgressCallback);
   }
   
   const success = await initializationPromise;
