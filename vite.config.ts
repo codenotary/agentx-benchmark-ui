@@ -99,9 +99,33 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       output: {
-        manualChunks: undefined
+        manualChunks: (id) => {
+          // Code splitting for JSONIC features
+          if (id.includes('src/jsonic/features/debug-tools')) {
+            return 'jsonic-debug';
+          }
+          if (id.includes('src/jsonic/features/performance-monitor')) {
+            return 'jsonic-performance';
+          }
+          if (id.includes('src/jsonic/core')) {
+            return 'jsonic-core';
+          }
+          if (id.includes('node_modules/react')) {
+            return 'vendor-react';
+          }
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
+        },
+        chunkFileNames: (chunkInfo) => {
+          if (chunkInfo.name.includes('jsonic')) {
+            return 'assets/jsonic/[name].[hash].js';
+          }
+          return 'assets/[name].[hash].js';
+        }
       }
-    }
+    },
+    chunkSizeWarningLimit: 600
   },
   worker: {
     format: 'es'

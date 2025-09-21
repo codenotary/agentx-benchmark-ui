@@ -127,10 +127,16 @@ class JsonicService {
       const isWorker = typeof window === 'undefined' && typeof self !== 'undefined';
       
       // Check for wrapper mode via URL param or env var
-      const urlParams = new URLSearchParams(window.location.search);
-      const wrapperMode = urlParams.get('wrapper') || 
-                         import.meta.env.VITE_JSONIC_WRAPPER || 
-                         'hybrid'; // Default to hybrid
+      let wrapperMode: string;
+      if (isWorker) {
+        // In worker, use environment variable or default
+        wrapperMode = import.meta.env.VITE_JSONIC_WRAPPER || 'hybrid';
+      } else {
+        const urlParams = new URLSearchParams(window.location.search);
+        wrapperMode = urlParams.get('wrapper') || 
+                     import.meta.env.VITE_JSONIC_WRAPPER || 
+                     'hybrid'; // Default to hybrid
+      }
       
       // Select wrapper based on mode
       let jsonicUrl: string;
@@ -141,19 +147,19 @@ class JsonicService {
         // Use original lightweight wrapper for comparison
         console.log('[JSONIC] Using LIGHTWEIGHT v1 wrapper for faster init');
         jsonicUrl = import.meta.env.DEV 
-          ? `${window.location.origin}/jsonic-wrapper.esm.js`
+          ? `${self.location ? self.location.origin : 'http://localhost:5173'}/jsonic-wrapper.esm.js`
           : `${baseUrl}jsonic-wrapper.esm.js`;
       } else if (wrapperMode === 'v3') {
         // Use full v3.1 wrapper with all features loaded
         console.log('[JSONIC] Using FULL v3.1 wrapper with all features');
         jsonicUrl = import.meta.env.DEV 
-          ? `${window.location.origin}/jsonic-wrapper-v3.esm.js`
+          ? `${self.location ? self.location.origin : 'http://localhost:5173'}/jsonic-wrapper-v3.esm.js`
           : `${baseUrl}jsonic-wrapper-v3.esm.js`;
       } else {
         // Use new HYBRID wrapper - fast init with progressive loading
         console.log('[JSONIC] Using HYBRID wrapper (v4) - fast init + progressive features');
         jsonicUrl = import.meta.env.DEV 
-          ? `${window.location.origin}/jsonic-hybrid/index.js`
+          ? `${self.location ? self.location.origin : 'http://localhost:5173'}/jsonic-hybrid/index.js`
           : `${baseUrl}jsonic-hybrid/index.js`;
       }
       
@@ -176,7 +182,7 @@ class JsonicService {
         wasmUrl = '/agentx-benchmark-ui/jsonic_wasm_bg.wasm';
       } else {
         // In main thread, check the current path
-        wasmUrl = window.location.pathname.startsWith('/agentx-benchmark-ui/') 
+        wasmUrl = (typeof window !== 'undefined' && window.location.pathname.startsWith('/agentx-benchmark-ui/'))
           ? '/agentx-benchmark-ui/jsonic_wasm_bg.wasm'
           : `${baseUrl}jsonic_wasm_bg.wasm`;
       }

@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { jsonicService } from '../services/jsonicService';
 
 interface PerformanceTiming {
   phase: string;

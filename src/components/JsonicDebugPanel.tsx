@@ -201,9 +201,9 @@ export const JsonicDebugPanel: React.FC<DebugPanelProps> = ({ isOpen = false, on
                 Clear
               </button>
             </div>
-            {debugInfo?.slowQueries?.length > 0 ? (
+            {debugInfo?.slowQueries && debugInfo.slowQueries.length > 0 ? (
               <div className="space-y-2">
-                {debugInfo.slowQueries.slice(0, 5).map((query, i) => (
+                {debugInfo?.slowQueries?.slice(0, 5).map((query, i) => (
                   <div key={i} className="bg-gray-800 rounded p-2">
                     <div className="flex justify-between mb-1">
                       <span className="text-blue-400">{query.operation}</span>
@@ -211,7 +211,7 @@ export const JsonicDebugPanel: React.FC<DebugPanelProps> = ({ isOpen = false, on
                     </div>
                     {query.details && (
                       <div className="text-gray-500 text-xs truncate">
-                        {JSON.stringify(query.details)}
+                        {typeof query.details === 'string' ? query.details : JSON.stringify(query.details)}
                       </div>
                     )}
                   </div>
@@ -277,9 +277,9 @@ export const JsonicDebugPanel: React.FC<DebugPanelProps> = ({ isOpen = false, on
         {activeTab === 'indexes' && (
           <div className="space-y-3">
             <h4 className="text-gray-400 mb-2">Active Indexes</h4>
-            {debugInfo?.indexes?.length > 0 ? (
+            {debugInfo?.indexes && debugInfo.indexes.length > 0 ? (
               <div className="space-y-2">
-                {debugInfo.indexes.map((index) => (
+                {debugInfo?.indexes?.map((index) => (
                   <div key={index.field} className="bg-gray-800 rounded p-2">
                     <div className="flex justify-between mb-1">
                       <span className="text-blue-400">{index.field}</span>
