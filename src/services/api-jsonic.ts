@@ -16,8 +16,8 @@ import {
   fetchStatsJsonic
 } from './jsonicApi';
 
-// Import migration utilities - use optimized migration for reliability
-import { checkAndMigrateOptimized } from './optimizedMigration';
+// Import migration utilities - use mobile-optimized migration
+import { checkAndMigrateMobile } from './mobileMigration';
 
 // Track initialization
 let initialized = false;
@@ -35,8 +35,8 @@ async function ensureInitialized() {
   
   // Ensure we only initialize once
   if (!initializationPromise) {
-    // Use optimized migration for reliability
-    initializationPromise = checkAndMigrateOptimized(migrationProgressCallback);
+    // Use mobile-optimized migration with device detection
+    initializationPromise = checkAndMigrateMobile(migrationProgressCallback);
   }
   
   const success = await initializationPromise;
