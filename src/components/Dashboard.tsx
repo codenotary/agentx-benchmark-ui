@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { 
@@ -27,20 +27,42 @@ import TestResultsTable from './TestResultsTable';
 import PromptSummary from './PromptSummary';
 
 export default function Dashboard() {
+  useEffect(() => {
+    console.log('[DASHBOARD] Component mounted');
+    console.log('[DASHBOARD] Using API from:', '../services/api');
+  }, []);
   const [isTestResultsExpanded, setIsTestResultsExpanded] = useState(false);
   const [isPromptsExpanded, setIsPromptsExpanded] = useState(true);
   const [isModelComparisonExpanded, setIsModelComparisonExpanded] = useState(true);
-  const { data: runs, isLoading: runsLoading } = useQuery({
+  const { data: runs, isLoading: runsLoading, error: runsError } = useQuery({
     queryKey: ['benchmarkRuns'],
-    queryFn: fetchBenchmarkRuns,
+    queryFn: () => {
+      console.log('[DASHBOARD] Fetching benchmark runs...');
+      return fetchBenchmarkRuns();
+    },
     refetchInterval: 60000, // Refresh every minute
-  });
+    onSuccess: (data) => {
+      console.log('[DASHBOARD] Benchmark runs loaded:', data?.length || 0, 'runs');
+    },
+    onError: (error) => {
+      console.error('[DASHBOARD] Failed to load benchmark runs:', error);
+    }
+  } as any);
 
-  const { data: performance, isLoading: perfLoading } = useQuery({
+  const { data: performance, isLoading: perfLoading, error: perfError } = useQuery({
     queryKey: ['modelPerformance'],
-    queryFn: () => fetchModelPerformance(),
+    queryFn: () => {
+      console.log('[DASHBOARD] Fetching model performance...');
+      return fetchModelPerformance();
+    },
     refetchInterval: 60000,
-  });
+    onSuccess: (data) => {
+      console.log('[DASHBOARD] Model performance loaded:', data?.length || 0, 'records');
+    },
+    onError: (error) => {
+      console.error('[DASHBOARD] Failed to load model performance:', error);
+    }
+  } as any);
 
   const { data: trends, isLoading: trendsLoading } = useQuery({
     queryKey: ['performanceTrends'],
@@ -68,14 +90,37 @@ export default function Dashboard() {
 
   if (runsLoading || perfLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex flex-col items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <p className="mt-4 text-gray-600 dark:text-gray-400">Loading benchmark data...</p>
+        <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg max-w-md">
+          <p className="text-xs text-gray-500 dark:text-gray-400">Debug Info:</p>
+          <p className="text-xs text-gray-600 dark:text-gray-300">Runs Loading: {runsLoading ? 'Yes' : 'No'}</p>
+          <p className="text-xs text-gray-600 dark:text-gray-300">Performance Loading: {perfLoading ? 'Yes' : 'No'}</p>
+          {runsError && <p className="text-xs text-red-600 dark:text-red-400">Error: {String(runsError)}</p>}
+          {perfError && <p className="text-xs text-red-600 dark:text-red-400">Error: {String(perfError)}</p>}
+        </div>
       </div>
     );
   }
 
+  // Add debug panel for production
+  const showDebugPanel = true; // Always show in production for debugging
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Debug Panel */}
+      {showDebugPanel && (
+        <div className="fixed bottom-4 right-4 p-3 bg-black bg-opacity-75 text-white rounded-lg text-xs max-w-sm z-50">
+          <div className="font-bold mb-2">Debug Info</div>
+          <div>Runs: {runs?.length || 0}</div>
+          <div>Performance: {performance?.length || 0}</div>
+          <div>Trends: {trends?.length || 0}</div>
+          <div>Categories: {categories?.length || 0}</div>
+          <div>Errors: {runsError || perfError ? 'Yes' : 'No'}</div>
+          <div className="mt-2 text-yellow-300">Check console for details</div>
+        </div>
+      )}
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

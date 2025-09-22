@@ -46,9 +46,13 @@ async function ensureInitialized() {
 }
 
 export async function fetchBenchmarkRuns(): Promise<BenchmarkRun[]> {
+  console.log('[API-JSONIC] fetchBenchmarkRuns called');
   try {
     await ensureInitialized();
-    return await fetchBenchmarkRunsJsonic();
+    console.log('[API-JSONIC] Fetching benchmark runs from JSONIC...');
+    const runs = await fetchBenchmarkRunsJsonic();
+    console.log(`[API-JSONIC] Fetched ${runs.length} benchmark runs`);
+    return runs;
   } catch (error) {
     console.error('Failed to fetch benchmark runs from JSONIC:', error);
     throw error;

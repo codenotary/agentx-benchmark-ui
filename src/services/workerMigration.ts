@@ -17,10 +17,18 @@ type ProgressCallback = (progress: MigrationProgress) => void;
 let worker: Worker | null = null;
 
 export function checkAndMigrateWorker(onProgress?: ProgressCallback): Promise<boolean> {
+  console.log('[WORKER-MIGRATION] Starting worker migration check...');
+  console.log('[WORKER-MIGRATION] Browser info:', {
+    userAgent: navigator.userAgent,
+    platform: navigator.platform,
+    vendor: navigator.vendor,
+    language: navigator.language
+  });
+  
   return new Promise((resolve, reject) => {
     // Ensure this runs only in the browser
     if (typeof window === 'undefined') {
-      console.error('Worker migration only available in browser');
+      console.error('[WORKER-MIGRATION] Worker migration only available in browser');
       return resolve(false);
     }
 
@@ -32,13 +40,17 @@ export function checkAndMigrateWorker(onProgress?: ProgressCallback): Promise<bo
     }
 
     try {
-      console.log('🚀 Creating JSONIC migration worker...');
+      console.log('[WORKER-MIGRATION] 🚀 Creating JSONIC migration worker...');
+      console.log('[WORKER-MIGRATION] Current URL:', window.location.href);
+      console.log('[WORKER-MIGRATION] Base URL:', import.meta.env.BASE_URL);
       
       // Create the worker using the imported constructor
       worker = new MigrationWorker();
-      console.log('Worker created successfully');
+      console.log('[WORKER-MIGRATION] Worker created successfully');
 
       worker.onmessage = (event) => {
+        console.log('[WORKER-MIGRATION] Message from worker:', event.data.type, event.data);
+        
         if (event.data.type === 'progress') {
           onProgress?.(event.data.payload);
         } else if (event.data.type === 'migrationComplete') {

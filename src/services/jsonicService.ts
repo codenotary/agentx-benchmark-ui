@@ -118,6 +118,13 @@ class JsonicService {
   private async performInitialization(): Promise<void> {
     const initStartTime = performance.now();
     console.log('[JSONIC] Starting initialization...');
+    console.log('[JSONIC] Environment:', {
+      isDev: import.meta.env.DEV,
+      baseUrl: import.meta.env.BASE_URL,
+      mode: import.meta.env.MODE,
+      location: typeof window !== 'undefined' ? window.location.href : 'worker',
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'
+    });
     
     try {
       // Build the correct URL for the ES module wrapper
@@ -164,6 +171,8 @@ class JsonicService {
       }
       
       console.log('[JSONIC] Loading wrapper from:', jsonicUrl);
+      console.log('[JSONIC] Wrapper mode:', wrapperMode);
+      console.log('[JSONIC] Is Worker:', isWorker);
       
       // Dynamically import the ES module
       const moduleStartTime = performance.now();
@@ -195,6 +204,9 @@ class JsonicService {
         enablePersistence: false, // Disabled to avoid reloading on every refresh
         persistenceKey: 'agentx_benchmark_db'
       };
+      
+      console.log('[JSONIC] Configuration:', config);
+      console.log('[JSONIC] WASM URL:', wasmUrl);
       
       // Add v3/hybrid specific configs
       if (wrapperMode === 'v3' || wrapperMode === 'hybrid') {
