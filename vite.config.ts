@@ -110,9 +110,6 @@ export default defineConfig({
           if (id.includes('src/jsonic/core')) {
             return 'jsonic-core';
           }
-          if (id.includes('node_modules/react')) {
-            return 'vendor-react';
-          }
           if (id.includes('node_modules')) {
             return 'vendor';
           }
