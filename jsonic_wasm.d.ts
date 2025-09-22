@@ -55,7 +55,7 @@ export class JsonDB {
    */
   query(query_json: string): any;
   /**
-   * Query documents with options (sort, projection, etc.) - optimized version
+   * Query documents with options (sort, projection, etc.)
    */
   query_with_options(query_json: string, options_json: string): any;
   /**
@@ -88,6 +88,157 @@ export class JsonDB {
    * Clear all documents
    */
   clear(): any;
+}
+/**
+ * Query subscription for reactive updates
+ */
+export class QuerySubscription {
+  free(): void;
+  /**
+   * Create a new subscription
+   */
+  constructor(query: string);
+  /**
+   * Pause the subscription
+   */
+  pause(): void;
+  /**
+   * Resume the subscription
+   */
+  resume(): void;
+  /**
+   * Set update callback
+   */
+  on_update(callback: Function): void;
+  /**
+   * Trigger an update
+   */
+  notify(update: any): void;
+  /**
+   * Get subscription ID
+   */
+  readonly id: string;
+  /**
+   * Check if subscription is active
+   */
+  readonly active: boolean;
+}
+/**
+ * Reactive database with real-time updates
+ */
+export class ReactiveDB {
+  free(): void;
+  /**
+   * Create a new reactive database
+   */
+  constructor();
+  /**
+   * Enable cross-tab synchronization
+   */
+  enable_cross_tab_sync(channel_name: string): void;
+  /**
+   * Create a reactive view
+   */
+  create_view(query: string): ReactiveView;
+  /**
+   * Subscribe to query changes
+   */
+  subscribe(query: string, callback: Function): QuerySubscription;
+  /**
+   * Broadcast a change to all tabs
+   */
+  broadcast_change(change: any): void;
+  /**
+   * Process a local change and notify subscribers
+   */
+  process_change(change: any): void;
+}
+/**
+ * Utilities for working with reactive features
+ */
+export class ReactiveUtils {
+  private constructor();
+  free(): void;
+  /**
+   * Check if SharedArrayBuffer is available
+   */
+  static is_shared_memory_available(): boolean;
+  /**
+   * Check if BroadcastChannel is available
+   */
+  static is_broadcast_channel_available(): boolean;
+  /**
+   * Create a change event
+   */
+  static create_change_event(change_type: string, document_id: string, document: any): any;
+  /**
+   * Create an update notification
+   */
+  static create_update(added: Array<any>, removed: Array<any>, updated: Array<any>): any;
+}
+/**
+ * JavaScript-friendly reactive view
+ */
+export class ReactiveView {
+  free(): void;
+  /**
+   * Create a new reactive view with a query
+   */
+  constructor(query: string);
+  /**
+   * Set callback for updates
+   */
+  on_update(callback: Function): void;
+  /**
+   * Enable cross-tab synchronization
+   */
+  enable_cross_tab(channel_name: string): void;
+  /**
+   * Broadcast an update to other tabs
+   */
+  broadcast_update(data: any): void;
+  /**
+   * Get the view ID
+   */
+  readonly id: string;
+  /**
+   * Get the query
+   */
+  readonly query: string;
+}
+/**
+ * SharedArrayBuffer wrapper for zero-copy data transfer
+ */
+export class SharedBuffer {
+  free(): void;
+  /**
+   * Create a new shared buffer
+   */
+  constructor(size: number);
+  /**
+   * Write data to the buffer
+   */
+  write(data: Uint8Array): number;
+  /**
+   * Read data from the buffer
+   */
+  read(length: number): Uint8Array;
+  /**
+   * Reset the buffer position
+   */
+  reset(): void;
+  /**
+   * Get the underlying SharedArrayBuffer
+   */
+  readonly buffer: SharedArrayBuffer;
+  /**
+   * Get current position
+   */
+  readonly position: number;
+  /**
+   * Get buffer size
+   */
+  readonly size: number;
 }
 /**
  * WASM bindings for SharedArrayBuffer
@@ -124,6 +275,41 @@ export interface InitOutput {
   readonly jsondb_list_indexes: (a: number, b: number) => void;
   readonly jsondb_aggregate: (a: number, b: number, c: number, d: number) => void;
   readonly jsondb_clear: (a: number, b: number) => void;
+  readonly __wbg_reactiveview_free: (a: number, b: number) => void;
+  readonly reactiveview_new: (a: number, b: number, c: number) => void;
+  readonly reactiveview_id: (a: number, b: number) => void;
+  readonly reactiveview_query: (a: number, b: number) => void;
+  readonly reactiveview_on_update: (a: number, b: number) => void;
+  readonly reactiveview_enable_cross_tab: (a: number, b: number, c: number, d: number) => void;
+  readonly reactiveview_broadcast_update: (a: number, b: number, c: number) => void;
+  readonly __wbg_querysubscription_free: (a: number, b: number) => void;
+  readonly querysubscription_new: (a: number, b: number) => number;
+  readonly querysubscription_id: (a: number, b: number) => void;
+  readonly querysubscription_active: (a: number) => number;
+  readonly querysubscription_pause: (a: number) => void;
+  readonly querysubscription_resume: (a: number) => void;
+  readonly querysubscription_on_update: (a: number, b: number) => void;
+  readonly querysubscription_notify: (a: number, b: number, c: number) => void;
+  readonly __wbg_reactivedb_free: (a: number, b: number) => void;
+  readonly reactivedb_new: () => number;
+  readonly reactivedb_enable_cross_tab_sync: (a: number, b: number, c: number, d: number) => void;
+  readonly reactivedb_create_view: (a: number, b: number, c: number, d: number) => void;
+  readonly reactivedb_subscribe: (a: number, b: number, c: number, d: number) => number;
+  readonly reactivedb_broadcast_change: (a: number, b: number, c: number) => void;
+  readonly reactivedb_process_change: (a: number, b: number, c: number) => void;
+  readonly __wbg_sharedbuffer_free: (a: number, b: number) => void;
+  readonly sharedbuffer_new: (a: number, b: number) => void;
+  readonly sharedbuffer_buffer: (a: number) => number;
+  readonly sharedbuffer_write: (a: number, b: number, c: number, d: number) => void;
+  readonly sharedbuffer_read: (a: number, b: number, c: number) => void;
+  readonly sharedbuffer_reset: (a: number) => void;
+  readonly sharedbuffer_position: (a: number) => number;
+  readonly sharedbuffer_size: (a: number) => number;
+  readonly __wbg_reactiveutils_free: (a: number, b: number) => void;
+  readonly reactiveutils_is_shared_memory_available: () => number;
+  readonly reactiveutils_is_broadcast_channel_available: () => number;
+  readonly reactiveutils_create_change_event: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
+  readonly reactiveutils_create_update: (a: number, b: number, c: number, d: number) => void;
   readonly init: () => void;
   readonly __wbg_wasmsharedbuffer_free: (a: number, b: number) => void;
   readonly wasmsharedbuffer_new: (a: number) => number;
@@ -134,9 +320,11 @@ export interface InitOutput {
   readonly wasmsharedbuffer_reset: (a: number) => void;
   readonly __wbindgen_export_0: (a: number, b: number) => number;
   readonly __wbindgen_export_1: (a: number, b: number, c: number, d: number) => number;
-  readonly __wbindgen_export_2: (a: number, b: number, c: number) => void;
-  readonly __wbindgen_export_3: (a: number) => void;
+  readonly __wbindgen_export_2: (a: number) => void;
+  readonly __wbindgen_export_3: (a: number, b: number, c: number) => void;
+  readonly __wbindgen_export_4: WebAssembly.Table;
   readonly __wbindgen_add_to_stack_pointer: (a: number) => number;
+  readonly __wbindgen_export_5: (a: number, b: number, c: number) => void;
 }
 
 export type SyncInitInput = BufferSource | WebAssembly.Module;
