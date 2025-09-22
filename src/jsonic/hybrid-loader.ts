@@ -75,8 +75,8 @@ export class HybridJSONIC {
    */
   private async loadCore(): Promise<void> {
     // Import existing JSONIC implementation
-    const jsonicModule = await import('../../utils/jsonic-wrapper');
-    this.db = jsonicModule.JSONIC;
+    const jsonicModule = await import('../../services/jsonicService');
+    this.db = jsonicModule.jsonicService;
     
     this.loadedFeatures.add('core');
     featureDetector.registerFeature('core', this.db);
@@ -191,7 +191,7 @@ export class HybridJSONIC {
   getStats() {
     return {
       mode: this.config.mode,
-      loadedFeatures: Array.from(this.loadedFeatures),
+      loaded: Array.from(this.loadedFeatures),
       pendingLoads: Array.from(this.loadingFeatures.keys()),
       ...featureDetector.getStats()
     };
