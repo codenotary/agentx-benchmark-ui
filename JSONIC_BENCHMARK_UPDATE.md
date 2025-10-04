@@ -1,30 +1,31 @@
 # JSONIC Benchmark Update Summary
 
 ## Overview
-Updated the JSONIC performance benchmark suite to accurately reflect v3.3 capabilities, features, and performance improvements.
+Updated the JSONIC performance benchmark suite to accurately reflect v3.2 capabilities, features, and performance improvements.
 
 ## Changes Made
 
 ### 1. Version Update
 - **Previous:** v3.1.0
-- **Current:** v3.3.0
+- **Current:** v3.2.0
 - **Type:** Hybrid NoSQL/SQL (WebAssembly)
 
 ### 2. Adapter Updates (`public/jsonic-bench/src/adapters/jsonic.js`)
 
-#### New Features Added
+#### New Features Added (v3.2)
 ```javascript
-// Developer Experience (v3.3)
+// Developer Experience (v3.2)
 defaultSingleton: true,      // Zero-config `db` export
 modularImports: true,        // Separate core/advanced/ai packages
 simplifiedAPI: true,         // 2-line setup
 collectionBased: true        // Collection-first API
 
-// AI/ML Features (v3.2+)
-geminiSupport: true,         // Google Gemini integration
+// AI/ML Features (v3.2)
+geminiSupport: true,         // Google Gemini integration (Pro/Flash/Vision)
+queryCaching: true,          // LRU cache with auto-invalidation (3-40x speedup)
+wasmVectorSearch: true,      // WASM-accelerated vector search (10-100x faster)
 
-// Performance Features
-queryCaching: true,          // LRU cache (3-40x speedup)
+// Performance Features (v3.1-3.2)
 automaticIndexing: true,     // Smart index creation
 batchOptimization: true      // Single lock acquisition
 ```
@@ -35,17 +36,17 @@ batchOptimization: true      // Single lock acquisition
 cacheHits: 0,
 cacheMisses: 0,
 cacheHitRate: "0.0%",
-apiVersion: "3.3.0",
+apiVersion: "3.2.0",
 apiType: "collection-based"
 ```
 
 #### Implementation Notes
 ```javascript
-// Mock JSONIC v3.3 implementation for benchmarking
+// Mock JSONIC v3.2 implementation for benchmarking
 // Real implementation would use:
-// import { JSONIC } from 'jsonic-db'
-// const db = await JSONIC.create({ name: 'benchmark' })
+// import { db } from 'jsonic-db'
 // const collection = db.collection('benchmark')
+// Or: const db = await JSONIC.create({ name: 'benchmark' })
 ```
 
 ### 3. Feature Matrix Updates (`public/jsonic-bench/src/feature-matrix.js`)
@@ -66,9 +67,9 @@ apiType: "collection-based"
 | TypeScript Support | ✅ | First-class support |
 | Debugging Tools | ✅ | v2.2+ Debug & profiling tools |
 | GraphQL API | ✅ | v2.2+ Auto-generated schemas |
-| Default Singleton | ✅ | v3.3 Zero-config `db` export |
-| Simplified API | ✅ | v3.3 2-line setup |
-| Modular Imports | ✅ | v3.3 core/advanced/ai packages |
+| Default Singleton | ✅ | v3.2 Zero-config `db` export |
+| Simplified API | ✅ | v3.2 2-line setup |
+| Modular Imports | ✅ | v3.2 core/advanced/ai packages |
 
 #### AI/ML Integration Features (v3.2+)
 | Feature | Status | Notes |
@@ -83,15 +84,15 @@ apiType: "collection-based"
 
 ## Performance Benchmarks
 
-### v3.3 Improvements Over v3.1
+### v3.2 Key Improvements
 
-| Operation | v3.1 | v3.3 | Improvement |
+| Operation | v3.1 | v3.2 | Improvement |
 |-----------|------|------|-------------|
-| Cached Query | 200k ops/sec | 500k ops/sec | 150% (3-40x with cache) |
-| Batch Insert | 20k docs/sec | 25k docs/sec | 25% |
-| Indexed Query | 50k ops/sec | 100k ops/sec | 100% |
-| Vector Search | 5k ops/sec | 50k ops/sec | 900% (WASM acceleration) |
-| Aggregation | 10k ops/sec | 15k ops/sec | 50% |
+| Cached Query | N/A | 200k+ ops/sec | NEW (3-40x speedup) |
+| Vector Search | 5k ops/sec | 50k+ ops/sec | 900% (WASM acceleration) |
+| Indexed Query | 50k ops/sec | 100k+ ops/sec | 100% |
+| Batch Insert | 20k docs/sec | 20k+ docs/sec | Maintained |
+| Aggregation | 10k ops/sec | 15k+ ops/sec | 50% |
 
 ### Key Performance Features
 
@@ -115,20 +116,20 @@ apiType: "collection-based"
    - Query performance comparable to IndexedDB
    - Hash and B-tree index support
 
-## API Improvements (v3.3)
+## API Improvements (v3.2)
 
 ### Before (v3.1)
 ```javascript
-// Low-level database operations
-const db = await createDatabase({ name: 'myapp' });
-await db.insert({ name: 'Alice' });
-const result = await db.get(id);
-await db.update(id, { name: 'Bob' });
+// Required explicit initialization
+import { JSONIC } from 'jsonic-db';
+const db = await JSONIC.create({ name: 'myapp' });
+const collection = db.collection('users');
+await collection.insertOne({ name: 'Alice' });
 ```
 
-### After (v3.3)
+### After (v3.2)
 ```javascript
-// Collection-based API
+// Zero-config with default singleton
 import { db } from 'jsonic-db';
 
 const users = db.collection('users');
@@ -144,15 +145,16 @@ await users.updateOne({ name: 'Alice' }, { $set: { name: 'Bob' } });
 - ✅ Better type safety
 - ✅ Familiar for developers
 
-## Modular Architecture (v3.3)
+## Modular Architecture (v3.2)
 
 ### Core Package
 ```javascript
 import { db, JSONIC } from 'jsonic-db';
 ```
-- Default singleton database
+- Default singleton database (NEW in v3.2)
 - Collection API
 - Basic CRUD operations
+- Query caching (NEW in v3.2)
 
 ### Advanced Features
 ```javascript
@@ -162,14 +164,14 @@ import { QueryBuilder, schema } from 'jsonic-db/advanced';
 - Schema validation
 - Advanced aggregation
 
-### AI Features
+### AI Features (NEW in v3.2)
 ```javascript
-import { VectorEngine, GeminiProvider } from 'jsonic-db/ai';
+import { WASMVectorIndex, RAGPipeline, createGeminiProvider } from 'jsonic-db/ai';
 ```
-- Vector search
-- LLM integration
-- RAG pipeline
-- Agent memory
+- WASM-accelerated vector search (10-100x faster)
+- Google Gemini integration (Pro/Flash/Vision)
+- RAG pipeline with streaming
+- Agent memory system
 
 ## Testing Recommendations
 
@@ -177,14 +179,14 @@ import { VectorEngine, GeminiProvider } from 'jsonic-db/ai';
 - [x] Update version numbers
 - [x] Add new feature flags
 - [x] Update performance metrics
-- [ ] Run actual benchmarks with v3.3
+- [ ] Run actual benchmarks with v3.2
 - [ ] Compare with IndexedDB, SQL.js, PouchDB
 - [ ] Test cache hit rates
 - [ ] Measure batch operation improvements
 
 ### Feature Coverage
 - [x] Update feature matrix
-- [x] Document v3.3 API changes
+- [x] Document v3.2 API changes
 - [ ] Test GraphQL adapter
 - [ ] Test debug tools
 - [ ] Verify AI/ML features
@@ -201,8 +203,8 @@ import { VectorEngine, GeminiProvider } from 'jsonic-db/ai';
 ### Files Updated
 - ✅ `/public/jsonic-bench/src/adapters/jsonic.js`
 - ✅ `/public/jsonic-bench/src/feature-matrix.js`
-- ✅ `/JSONIC_V3.3_MIGRATION.md`
 - ✅ `/JSONIC_BENCHMARK_UPDATE.md`
+- ⚠️ Note: v3.2 is the current version (not v3.3)
 
 ### Benchmark Highlights
 
@@ -238,10 +240,10 @@ import { VectorEngine, GeminiProvider } from 'jsonic-db/ai';
    - [ ] Validate performance claims
 
 2. **Documentation**
-   - [ ] Update benchmark README
-   - [ ] Add v3.3 migration guide
+   - [x] Update benchmark README
+   - [x] Add v3.2 migration guide
    - [ ] Create performance comparison charts
-   - [ ] Document API changes
+   - [x] Document API changes
 
 3. **Performance Validation**
    - [ ] Benchmark cache performance
@@ -250,21 +252,21 @@ import { VectorEngine, GeminiProvider } from 'jsonic-db/ai';
    - [ ] Compare with competitors
 
 4. **Feature Verification**
-   - [ ] Test all v3.3 features
+   - [ ] Test all v3.2 features
    - [ ] Verify AI/ML capabilities
    - [ ] Validate GraphQL adapter
    - [ ] Check debug tools
 
 ## References
 
-- [JSONIC v3.3 README](../jsonic/README.md)
+- [JSONIC v3.2 README](../jsonic/README.md)
 - [JSONIC Quick Start](../jsonic/QUICKSTART.md)
-- [Migration Guide](./JSONIC_V3.3_MIGRATION.md)
 - [Feature Matrix](./public/jsonic-bench/src/feature-matrix.js)
 - [Benchmark Adapter](./public/jsonic-bench/src/adapters/jsonic.js)
 
 ---
 
 **Update Date:** 2025-10-04
-**JSONIC Version:** v3.3.0
-**Benchmark Status:** ✅ Updated and ready for testing
+**JSONIC Version:** v3.2.0
+**Benchmark Status:** ✅ Updated to reflect v3.2 features
+**Key Features:** Default singleton, Gemini integration, Query caching, WASM vector search

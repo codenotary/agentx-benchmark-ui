@@ -1,15 +1,15 @@
 import { DatabaseAdapter } from './base.js';
 
 /**
- * JSONIC v3.3 adapter for benchmarks
- * Features simplified API with collection-based operations
+ * JSONIC v3.2 adapter for benchmarks
+ * Features simplified API with collection-based operations, Gemini integration, and query caching
  */
 export class JsonicAdapter extends DatabaseAdapter {
   constructor(config = {}) {
     super(config);
     this.name = 'JSONIC';
     this.type = 'NoSQL + SQL (WebAssembly)';
-    this.version = '3.3.0';
+    this.version = '3.2.0';
     this.features = {
       // Core Database Features
       transactions: true,           // ✅ MVCC with ACID compliance
@@ -36,24 +36,24 @@ export class JsonicAdapter extends DatabaseAdapter {
       aiIntegration: true,         // ✅ RAG Pipeline & Agent Memory
       geminiSupport: true,         // ✅ v3.2+ Google Gemini integration
 
-      // Performance Features (v3.1-3.3)
+      // Performance Features (v3.1-3.2)
       queryCaching: true,          // ✅ v3.2+ LRU cache (3-40x speedup)
       automaticIndexing: true,     // ✅ v3.1+ Smart index creation
       batchOptimization: true,     // ✅ v3.1+ Single lock acquisition
 
-      // Developer Experience (v3.3)
-      defaultSingleton: true,      // ✅ v3.3 Zero-config `db` export
-      modularImports: true,        // ✅ v3.3 Separate core/advanced/ai packages
-      simplifiedAPI: true,         // ✅ v3.3 2-line setup
-      collectionBased: true        // ✅ v3.3 Collection-first API
+      // Developer Experience (v3.2)
+      defaultSingleton: true,      // ✅ v3.2 Zero-config `db` export
+      modularImports: true,        // ✅ v3.2 Separate core/advanced/ai packages
+      simplifiedAPI: true,         // ✅ v3.2 2-line setup
+      collectionBased: true        // ✅ v3.2 Collection-first API
     };
   }
 
   async init() {
-    // Mock JSONIC v3.3 implementation for benchmarking
-    // Real implementation would use: import { JSONIC } from 'jsonic-db'
-    // const db = await JSONIC.create({ name: 'benchmark' })
+    // Mock JSONIC v3.2 implementation for benchmarking
+    // Real implementation would use: import { db } from 'jsonic-db'
     // const collection = db.collection('benchmark')
+    // Or: const db = await JSONIC.create({ name: 'benchmark' })
 
     this.db = {
       collection: (name) => this.createMockCollection(name),
@@ -72,7 +72,7 @@ export class JsonicAdapter extends DatabaseAdapter {
     this.cacheHits = 0;
     this.cacheMisses = 0;
 
-    // v3.3 uses collection-based API
+    // v3.2 uses collection-based API
     this.collection = this.db.collection('benchmark');
     this.currentTx = null;
   }
@@ -510,8 +510,8 @@ export class JsonicAdapter extends DatabaseAdapter {
       cacheHits: dbStats.cache_hits,
       cacheMisses: dbStats.cache_misses,
       cacheHitRate: `${cacheHitRate}%`,
-      // v3.3 API version
-      apiVersion: '3.3.0',
+      // v3.2 API version
+      apiVersion: '3.2.0',
       apiType: 'collection-based'
     };
   }

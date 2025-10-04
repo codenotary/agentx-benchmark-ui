@@ -1,9 +1,9 @@
-# JSONIC v3.3 Migration Summary
+# JSONIC v3.2 Migration Summary
 
 ## Overview
-Updated the codebase to support JSONIC v3.3's new simplified API while maintaining backward compatibility with legacy wrappers.
+Updated the codebase to support JSONIC v3.2's new simplified API while maintaining backward compatibility with legacy wrappers.
 
-## Key Changes in JSONIC v3.3
+## Key Changes in JSONIC v3.2
 
 ### 1. **Default Database Singleton**
 - New `db` export for zero-config usage
@@ -39,7 +39,7 @@ Updated the codebase to support JSONIC v3.3's new simplified API while maintaini
      // ... low-level operations
    }
 
-   // New (v3.3)
+   // New (v3.2)
    interface JsonicCollection {
      insertOne(doc: any): Promise<{ _id: string }>;
      findOne(filter: any): Promise<any>;
@@ -55,7 +55,7 @@ Updated the codebase to support JSONIC v3.3's new simplified API while maintaini
 
 2. **Initialization:**
    ```typescript
-   // Try v3.3 npm package first
+   // Try v3.2 npm package first
    const { JSONIC: JSONICModule } = await import('jsonic-db');
    this.db = await JSONICModule.create({
      name: 'agentx_benchmark',
@@ -96,13 +96,13 @@ Updated the codebase to support JSONIC v3.3's new simplified API while maintaini
 ### `/src/components/JsonicDebugPanel.tsx`
 **Temporary Changes:**
 - Removed direct calls to `getDebugInfo()`, `clearCache()`, `clearProfiler()`
-- Added TODO comments for v3.3 debug API implementation
+- Added TODO comments for v3.2 debug API implementation
 - Mock data provided for debug info to prevent errors
 
 ## Migration Strategy
 
 ### Progressive Enhancement Approach
-1. **Primary:** Try loading JSONIC v3.3 from npm package
+1. **Primary:** Try loading JSONIC v3.2 from npm package
 2. **Fallback:** Use legacy wrappers (hybrid/v3/v1) if npm package unavailable
 3. **Compatibility:** Maintain legacy method signatures for gradual migration
 
@@ -113,7 +113,7 @@ All legacy methods maintained with internal conversion to collection API:
 - `update()` → wraps `updateOne()`
 - `delete()` → wraps `deleteOne()`
 
-## Benefits of v3.3
+## Benefits of v3.2
 
 1. **Simpler API:**
    - 2-line setup instead of 5+
@@ -146,12 +146,12 @@ All legacy methods maintained with internal conversion to collection API:
 ### Future Enhancements
 - [ ] Install jsonic-db npm package when published
 - [ ] Remove legacy wrapper fallback code
-- [ ] Implement v3.3 debug API when available
+- [ ] Implement v3.2 debug API when available
 - [ ] Migrate to advanced features (`jsonic-db/advanced`)
 - [ ] Add AI features (`jsonic-db/ai`) for vector search
 
 ### Testing Required
-- [ ] Test with v3.3 npm package
+- [ ] Test with v3.2 npm package
 - [ ] Test fallback to legacy wrappers
 - [ ] Test all CRUD operations
 - [ ] Test aggregation pipelines
@@ -160,7 +160,7 @@ All legacy methods maintained with internal conversion to collection API:
 
 ## API Reference Quick Guide
 
-### Basic Usage (v3.3)
+### Basic Usage (v3.2)
 ```typescript
 import { db } from 'jsonic-db';
 
@@ -211,14 +211,14 @@ import { VectorEngine, GeminiProvider } from 'jsonic-db/ai';
 
 ## Performance Improvements
 
-### v3.3 Optimizations
+### v3.2 Optimizations
 - **Query Caching:** LRU cache with automatic invalidation (3-40x speedup)
 - **Batch Operations:** Single lock acquisition (5-10x faster)
 - **Automatic Indexing:** Smart index creation on common fields
 - **WASM Optimization:** Reduced serialization overhead
 
 ### Benchmark Results
-| Operation | v3.1 | v3.3 | Improvement |
+| Operation | v3.1 | v3.2 | Improvement |
 |-----------|------|------|-------------|
 | Batch Insert | 20k docs/sec | 25k docs/sec | 25% |
 | Cached Query | 200k ops/sec | 500k ops/sec | 150% |
@@ -237,11 +237,11 @@ import { VectorEngine, GeminiProvider } from 'jsonic-db/ai';
 **Solution:** Use object format `{ field: 1 }` instead of array `[['field', 1]]`
 
 ### Issue: Debug panel not working
-**Solution:** Debug API not yet implemented in v3.3, using mock data
+**Solution:** Debug API not yet implemented in v3.2, using mock data
 
 ## References
 
-- [JSONIC v3.3 README](../jsonic/README.md)
+- [JSONIC v3.2 README](../jsonic/README.md)
 - [JSONIC Quick Start](../jsonic/QUICKSTART.md)
 - [JSONIC Developer Guide](../jsonic/DEVELOPER_GUIDE.md)
 - [Collection API Reference](../jsonic/src/collection.ts)
@@ -250,5 +250,5 @@ import { VectorEngine, GeminiProvider } from 'jsonic-db/ai';
 ---
 
 **Migration Date:** 2025-10-04
-**JSONIC Version:** v3.3.0
+**JSONIC Version:** v3.2.0
 **Status:** ✅ Core migration complete, backward compatible

@@ -50,7 +50,7 @@ export const JsonicDebugPanel: React.FC<DebugPanelProps> = ({ isOpen = false, on
 
   const loadDebugInfo = useCallback(async () => {
     try {
-      // TODO: Update to use JSONIC v3.3 debug API when available
+      // TODO: Update to use JSONIC v3.2 debug API when available
       const stats = await jsonicGraphQL.getStats();
       setDbStats(stats);
 
@@ -85,14 +85,14 @@ export const JsonicDebugPanel: React.FC<DebugPanelProps> = ({ isOpen = false, on
   }, [isOpen, refreshInterval, loadDebugInfo]);
 
   const handleClearCache = async () => {
-    // TODO: Implement with JSONIC v3.3 API
-    console.log('Cache clear not available in v3.3 yet');
+    // TODO: Implement with JSONIC v3.2 API
+    console.log('Cache clear not available in v3.2 yet');
     await loadDebugInfo();
   };
 
   const handleClearProfiler = async () => {
-    // TODO: Implement with JSONIC v3.3 API
-    console.log('Profiler clear not available in v3.3 yet');
+    // TODO: Implement with JSONIC v3.2 API
+    console.log('Profiler clear not available in v3.2 yet');
     await loadDebugInfo();
   };
 
