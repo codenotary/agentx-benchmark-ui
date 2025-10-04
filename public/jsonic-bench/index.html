@@ -1000,24 +1000,40 @@
             <span>Insert</span>
           </label>
           <label>
+            <input type="checkbox" value="batchInsert" checked>
+            <span>⚡ Batch Insert (10k)</span>
+          </label>
+          <label>
             <input type="checkbox" value="query" checked>
             <span>Query</span>
+          </label>
+          <label>
+            <input type="checkbox" value="complexQuery" checked>
+            <span>🔍 Complex Query</span>
           </label>
           <label>
             <input type="checkbox" value="update" checked>
             <span>Update</span>
           </label>
           <label>
+            <input type="checkbox" value="batchUpdate" checked>
+            <span>⚡ Batch Update (10k)</span>
+          </label>
+          <label>
             <input type="checkbox" value="delete" checked>
             <span>Delete</span>
           </label>
           <label>
-            <input type="checkbox" value="aggregate">
-            <span>Aggregate</span>
+            <input type="checkbox" value="batchDelete" checked>
+            <span>⚡ Batch Delete (10k)</span>
           </label>
           <label>
-            <input type="checkbox" value="mongoFeatures" checked>
-            <span>📊 Advanced Features (Phase 3)</span>
+            <input type="checkbox" value="aggregate">
+            <span>📊 Aggregation Pipeline</span>
+          </label>
+          <label>
+            <input type="checkbox" value="mongoFeatures">
+            <span>🔧 MongoDB Features</span>
           </label>
           <label>
             <input type="checkbox" value="transaction">
@@ -1155,7 +1171,8 @@
           .filter(cb => ['jsonic', 'indexeddb', 'sqljs', 'localstorage'].includes(cb.value))
           .map(cb => cb.value),
         scenarios: Array.from(document.querySelectorAll('.checkbox-group input[type="checkbox"]:checked'))
-          .filter(cb => ['insert', 'query', 'update', 'delete', 'aggregate', 'transaction', 'memory'].includes(cb.value))
+          .filter(cb => ['insert', 'batchInsert', 'query', 'complexQuery', 'update', 'batchUpdate',
+                        'delete', 'batchDelete', 'aggregate', 'mongoFeatures', 'transaction', 'memory'].includes(cb.value))
           .map(cb => cb.value)
       };
       
