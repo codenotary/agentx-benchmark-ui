@@ -98,6 +98,7 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: true,
     rollupOptions: {
+      external: ['jsonic-db'],
       output: {
         manualChunks: (id) => {
           // Code splitting for JSONIC features
