@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JSONIC Insert Performance Analysis</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #0f0f0f;
+      color: #e0e0e0;
+    }
+
+    h1 {
+      color: #00d4ff;
+      border-bottom: 3px solid #00d4ff;
+      padding-bottom: 10px;
+    }
+
+    h2 {
+      color: #00ff88;
+      margin-top: 30px;
+    }
+
+    .benchmark-section {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+
+    .result {
+      background: #2a2a2a;
+      border-left: 4px solid #00d4ff;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+
+    .result.success {
+      border-left-color: #00ff88;
+    }
+
+    .result.warning {
+      border-left-color: #ffaa00;
+    }
+
+    .result.error {
+      border-left-color: #ff4444;
+    }
+
+    button {
+      background: #00d4ff;
+      color: #000;
+      border: none;
+      padding: 12px 24px;
+      font-size: 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      margin: 10px 5px;
+      transition: all 0.3s;
+    }
+
+    button:hover {
+      background: #00ff88;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 212, 255, 0.4);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .metric {
+      display: inline-block;
+      background: #333;
+      padding: 8px 16px;
+      margin: 5px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+    }
+
+    .metric.good {
+      color: #00ff88;
+    }
+
+    .metric.bad {
+      color: #ff4444;
+    }
+
+    .chart-container {
+      margin: 20px 0;
+      padding: 20px;
+      background: #2a2a2a;
+      border-radius: 8px;
+    }
+
+    .progress {
+      width: 100%;
+      height: 8px;
+      background: #333;
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 10px 0;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #00d4ff, #00ff88);
+      transition: width 0.3s;
+    }
+
+    pre {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      padding: 15px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 13px;
+    }
+
+    .speedup {
+      font-size: 24px;
+      font-weight: bold;
+      color: #00ff88;
+      text-align: center;
+      margin: 20px 0;
+    }
+
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+
+    .comparison-table th,
+    .comparison-table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #333;
+    }
+
+    .comparison-table th {
+      background: #2a2a2a;
+      color: #00d4ff;
+      font-weight: 600;
+    }
+
+    .comparison-table tr:hover {
+      background: #252525;
+    }
+
+    .loading {
+      text-align: center;
+      color: #00d4ff;
+      font-size: 18px;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>🚀 JSONIC Insert Performance Analysis</h1>
+
+  <div class="benchmark-section">
+    <h2>📊 Performance Optimization Results</h2>
+    <p>This benchmark compares the OLD implementation (Date.now() + Math.random() + mutation) with the NEW optimized implementation (simple counter + immutable patterns).</p>
+
+    <button onclick="runMicrobenchmarks()">🔬 Run Microbenchmarks</button>
+    <button onclick="runFullComparison()">⚡ Run Full Comparison</button>
+    <button onclick="runProfilingAnalysis()">📈 Run Profiling Analysis</button>
+    <button onclick="clearResults()">🧹 Clear Results</button>
+
+    <div id="progress-container" style="display: none;">
+      <div class="loading">Running benchmarks...</div>
+      <div class="progress">
+        <div class="progress-bar" id="progress-bar"></div>
+      </div>
+    </div>
+
+    <div id="results"></div>
+  </div>
+
+  <script type="module">
+    import { InsertMicrobenchmarks } from './src/benchmarks/microbenchmarks.js';
+    import { InsertProfiler } from './src/profiling/insert-profiler.js';
+    import { JsonicAdapter } from './src/adapters/jsonic.js';
+
+    window.runMicrobenchmarks = async function() {
+      showProgress();
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '<div class="result"><h3>🔬 Running Microbenchmarks...</h3></div>';
+
+      try {
+        const bench = new InsertMicrobenchmarks(100000);
+        const results = await bench.runAll();
+
+        const exportData = bench.exportResults();
+
+        let html = '<div class="result success">';
+        html += '<h3>✅ Microbenchmark Results</h3>';
+
+        // ID Generation
+        if (results.idGeneration) {
+          html += '<h4>1. ID Generation Strategy</h4>';
+          html += `<div class="speedup">${results.idGeneration.speedup}</div>`;
+          html += '<table class="comparison-table">';
+          html += '<tr><th>Strategy</th><th>Time</th><th>Ops/ms</th></tr>';
+          for (const [strategy, data] of Object.entries(results.idGeneration)) {
+            if (typeof data === 'object' && data.time) {
+              html += `<tr><td>${strategy}</td><td>${data.time.toFixed(2)}ms</td><td>${Math.round(data.opsPerMs)}</td></tr>`;
+            }
+          }
+          html += '</table>';
+        }
+
+        // Combined Insert
+        if (results.combinedInsert) {
+          html += '<h4>5. Combined Insert Operation (10,000 docs)</h4>';
+          html += `<div class="speedup">${results.combinedInsert.speedup} - ${results.combinedInsert.improvement}</div>`;
+          html += '<table class="comparison-table">';
+          html += '<tr><th>Implementation</th><th>Time</th><th>Docs/sec</th></tr>';
+          html += `<tr><td>OLD (Date.now + mutation)</td><td>${results.combinedInsert.oldImplementation.time.toFixed(2)}ms</td><td>${results.combinedInsert.oldImplementation.docsPerSec}</td></tr>`;
+          html += `<tr><td>NEW (counter + immutable)</td><td class="metric good">${results.combinedInsert.newImplementation.time.toFixed(2)}ms</td><td class="metric good">${results.combinedInsert.newImplementation.docsPerSec}</td></tr>`;
+          html += '</table>';
+        }
+
+        html += '<h4>Full Results:</h4>';
+        html += `<pre>${JSON.stringify(results, null, 2)}</pre>`;
+        html += '</div>';
+
+        resultsDiv.innerHTML = html;
+      } catch (error) {
+        resultsDiv.innerHTML = `<div class="result error"><h3>❌ Error</h3><p>${error.message}</p></div>`;
+      } finally {
+        hideProgress();
+      }
+    };
+
+    window.runFullComparison = async function() {
+      showProgress();
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '<div class="result"><h3>⚡ Running Full Comparison...</h3></div>';
+
+      try {
+        const profiler = new InsertProfiler();
+
+        const testDocs = Array.from({ length: 10000 }, (_, i) => ({
+          name: `User ${i}`,
+          email: `user${i}@example.com`,
+          age: 20 + (i % 50),
+          active: i % 2 === 0,
+          score: Math.random() * 100
+        }));
+
+        const comparison = await profiler.compareImplementations(testDocs);
+
+        let html = '<div class="result success">';
+        html += '<h3>✅ Full Implementation Comparison (10,000 documents)</h3>';
+        html += `<div class="speedup">${comparison.comparison.speedup} faster - ${comparison.comparison.improvement} improvement</div>`;
+
+        html += '<table class="comparison-table">';
+        html += '<tr><th>Implementation</th><th>Total Time</th><th>Avg/Doc</th><th>Docs/Sec</th></tr>';
+        html += `<tr>
+          <td>OLD (Date.now + mutation)</td>
+          <td>${comparison.oldImplementation.time.toFixed(2)}ms</td>
+          <td>${comparison.oldImplementation.avgPerDoc.toFixed(4)}ms</td>
+          <td>${comparison.oldImplementation.docsPerSec.toLocaleString()}</td>
+        </tr>`;
+        html += `<tr>
+          <td>NEW (counter + immutable)</td>
+          <td class="metric good">${comparison.newImplementation.time.toFixed(2)}ms</td>
+          <td class="metric good">${comparison.newImplementation.avgPerDoc.toFixed(4)}ms</td>
+          <td class="metric good">${comparison.newImplementation.docsPerSec.toLocaleString()}</td>
+        </tr>`;
+        html += '</table>';
+
+        html += '<h4>Performance Gains:</h4>';
+        html += `<div class="metric good">Time Saved: ${comparison.comparison.timeSaved}</div>`;
+        html += `<div class="metric good">Throughput Gain: +${comparison.comparison.docsPerSecGain.toLocaleString()} docs/sec</div>`;
+
+        html += '<h4>Raw Data:</h4>';
+        html += `<pre>${JSON.stringify(comparison, null, 2)}</pre>`;
+        html += '</div>';
+
+        resultsDiv.innerHTML = html;
+      } catch (error) {
+        resultsDiv.innerHTML = `<div class="result error"><h3>❌ Error</h3><p>${error.message}</p></div>`;
+      } finally {
+        hideProgress();
+      }
+    };
+
+    window.runProfilingAnalysis = async function() {
+      showProgress();
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '<div class="result"><h3>📈 Running Profiling Analysis...</h3></div>';
+
+      try {
+        const adapter = new JsonicAdapter();
+        await adapter.init();
+
+        const profiler = new InsertProfiler();
+
+        const testDocs = Array.from({ length: 1000 }, (_, i) => ({
+          name: `User ${i}`,
+          email: `user${i}@example.com`,
+          age: 20 + (i % 50)
+        }));
+
+        await profiler.profileBatchInsert(adapter, testDocs);
+
+        const exportData = profiler.export();
+        const lastProfile = exportData.profiles[exportData.profiles.length - 1];
+
+        let html = '<div class="result success">';
+        html += '<h3>✅ Profiling Analysis Results</h3>';
+
+        if (lastProfile && lastProfile.metrics) {
+          const m = lastProfile.metrics;
+
+          html += '<h4>Performance Breakdown:</h4>';
+          html += '<table class="comparison-table">';
+          html += '<tr><th>Phase</th><th>Time</th><th>Avg/Doc</th><th>Percentage</th></tr>';
+          html += `<tr><td>ID Generation</td><td>${m.phases.idGeneration.time.toFixed(2)}ms</td><td>${m.phases.idGeneration.avgPerDoc.toFixed(4)}ms</td><td>${m.total.breakdown.idGeneration}</td></tr>`;
+          html += `<tr><td>Document Enrichment</td><td>${m.phases.enrichment.time.toFixed(2)}ms</td><td>${m.phases.enrichment.avgPerDoc.toFixed(4)}ms</td><td>${m.total.breakdown.enrichment}</td></tr>`;
+          html += `<tr><td>Map Insertion</td><td>${m.phases.mapInsertion.time.toFixed(2)}ms</td><td>${m.phases.mapInsertion.avgPerDoc.toFixed(4)}ms</td><td>${m.total.breakdown.mapInsertion}</td></tr>`;
+          html += `<tr><td><strong>Total</strong></td><td><strong>${m.total.time.toFixed(2)}ms</strong></td><td><strong>${m.total.avgPerDoc.toFixed(4)}ms</strong></td><td><strong>100%</strong></td></tr>`;
+          html += '</table>';
+
+          html += `<h4>Throughput:</h4>`;
+          html += `<div class="metric good">${m.total.docsPerSec.toLocaleString()} docs/sec</div>`;
+        }
+
+        html += '<h4>Full Profile Data:</h4>';
+        html += `<pre>${JSON.stringify(exportData, null, 2)}</pre>`;
+        html += '</div>';
+
+        resultsDiv.innerHTML = html;
+      } catch (error) {
+        resultsDiv.innerHTML = `<div class="result error"><h3>❌ Error</h3><p>${error.message}</p><pre>${error.stack}</pre></div>`;
+      } finally {
+        hideProgress();
+      }
+    };
+
+    window.clearResults = function() {
+      document.getElementById('results').innerHTML = '';
+    };
+
+    function showProgress() {
+      document.getElementById('progress-container').style.display = 'block';
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 2;
+        if (progress > 100) progress = 0;
+        document.getElementById('progress-bar').style.width = progress + '%';
+      }, 50);
+      window.progressInterval = interval;
+    }
+
+    function hideProgress() {
+      clearInterval(window.progressInterval);
+      document.getElementById('progress-container').style.display = 'none';
+    }
+  </script>
+</body>
+</html>
