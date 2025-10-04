@@ -70,6 +70,9 @@ export class JsonicAdapter extends DatabaseAdapter {
     this.cacheHits = 0;
     this.cacheMisses = 0;
 
+    // Performance optimization: Use simple counter instead of Date.now()
+    this.idCounter = 0;
+
     // v3.1+ uses collection-based API
     this.collection = this.db.collection('benchmark');
     this.currentTx = null;
@@ -79,21 +82,31 @@ export class JsonicAdapter extends DatabaseAdapter {
     const self = this;
     return {
       insertOne: async (doc) => {
+        // Performance optimization: Simple counter instead of Date.now() + Math.random()
+        const id = ++self.idCounter;
+        // Avoid mutation: create new object with _id
+        const enrichedDoc = { ...doc, _id: id };
+        self.documents.set(id, enrichedDoc);
         self.operations++;
-        const id = Date.now() + Math.random();
-        doc._id = id;
-        self.documents.set(id, doc);
         return { insertedId: id };
       },
       insertMany: async (docs) => {
+        // Performance optimization: Batch operations
         const ids = [];
-        for (const doc of docs) {
-          self.operations++;
-          const id = Date.now() + Math.random();
-          doc._id = id;
-          self.documents.set(id, doc);
+        const docsLength = docs.length;
+
+        // Pre-allocate IDs for better performance
+        for (let i = 0; i < docsLength; i++) {
+          const id = ++self.idCounter;
+          // Avoid mutation: create new object with _id
+          const enrichedDoc = { ...docs[i], _id: id };
+          self.documents.set(id, enrichedDoc);
           ids.push(id);
         }
+
+        // Batch increment operations counter (move outside loop)
+        self.operations += docsLength;
+
         return { insertedIds: ids };
       },
       find: (query) => {
