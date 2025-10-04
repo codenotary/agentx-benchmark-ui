@@ -2,5 +2,5 @@
   "serverMode": "chunked",
   "requestChunkSize": 4096,
   "url": "benchmark.db",
-  "databaseLengthBytes": 581632
+  "databaseLengthBytes": 491520
 }
