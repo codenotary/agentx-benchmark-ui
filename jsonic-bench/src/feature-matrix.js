@@ -5,7 +5,7 @@
 export const FEATURE_MATRIX = {
   jsonic: {
     name: 'JSONIC',
-    version: '3.3.0',
+    version: '3.2.0',
     type: 'Hybrid NoSQL/SQL (WebAssembly)',
     features: {
       // Storage Features
@@ -118,9 +118,9 @@ export const FEATURE_MATRIX = {
         'ORM/ODM': true, // ✅ Collection API
         'REST API': false, // TODO: Future enhancement
         'GraphQL API': true, // ✅ v2.2+ Auto-generated schemas
-        'Default Singleton': true, // ✅ v3.3 Zero-config `db` export
-        'Simplified API': true, // ✅ v3.3 2-line setup
-        'Modular Imports': true, // ✅ v3.3 core/advanced/ai packages
+        'Default Singleton': true, // ✅ v3.2 Zero-config `db` export
+        'Simplified API': true, // ✅ v3.2 2-line setup
+        'Modular Imports': true, // ✅ v3.2 core/advanced/ai packages
       },
       
       // Security
