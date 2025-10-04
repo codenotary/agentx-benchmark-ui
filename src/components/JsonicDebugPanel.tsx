@@ -50,12 +50,18 @@ export const JsonicDebugPanel: React.FC<DebugPanelProps> = ({ isOpen = false, on
 
   const loadDebugInfo = useCallback(async () => {
     try {
-      const [debug, stats] = await Promise.all([
-        jsonicService.getDebugInfo(),
-        jsonicGraphQL.getStats()
-      ]);
-      setDebugInfo(debug);
+      // TODO: Update to use JSONIC v3.3 debug API when available
+      const stats = await jsonicGraphQL.getStats();
       setDbStats(stats);
+
+      // Mock debug info for now
+      setDebugInfo({
+        cache: { size: 0, maxSize: 0, hits: 0, misses: 0, hitRate: '0%' },
+        profiler: { totalQueries: 0, avgDuration: '0ms', slowQueries: 0 },
+        slowQueries: [],
+        indexes: [],
+        memory: { used: 0, limit: 0, percentage: '0%' }
+      });
     } catch (error) {
       console.error('Failed to load debug info:', error);
     }
@@ -79,12 +85,14 @@ export const JsonicDebugPanel: React.FC<DebugPanelProps> = ({ isOpen = false, on
   }, [isOpen, refreshInterval, loadDebugInfo]);
 
   const handleClearCache = async () => {
-    await jsonicService.clearCache();
+    // TODO: Implement with JSONIC v3.3 API
+    console.log('Cache clear not available in v3.3 yet');
     await loadDebugInfo();
   };
 
   const handleClearProfiler = async () => {
-    await jsonicService.clearProfiler();
+    // TODO: Implement with JSONIC v3.3 API
+    console.log('Profiler clear not available in v3.3 yet');
     await loadDebugInfo();
   };
 

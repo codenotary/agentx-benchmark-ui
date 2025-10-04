@@ -34,17 +34,17 @@ export async function storeTestResult(test: TestResult, runId: string): Promise<
 }
 
 export async function fetchBenchmarkRunsJsonic(): Promise<BenchmarkRun[]> {
-  // Use MongoDB-like query with native sorting
+  // Use MongoDB-like query with native sorting (v3.3 format)
   const docs = await jsonicService.findDocuments(
     { _type: 'benchmark_run' },
-    { sort: [['timestamp', -1]] }
+    { sort: { timestamp: -1 } }
   );
-  
+
   const runs: BenchmarkRun[] = docs.map(doc => {
     const { id, _type, _runId, _timestamp, ...runData } = doc;
     return runData as BenchmarkRun;
   });
-  
+
   return runs;
 }
 
@@ -59,10 +59,10 @@ export async function fetchModelPerformanceJsonic(runId?: string): Promise<Model
     }
   }
   
-  // Use MongoDB-like query with compound filter and sorting
+  // Use MongoDB-like query with compound filter and sorting (v3.3 format)
   const docs = await jsonicService.findDocuments(
     { _type: 'model_performance', _runId: latestRunId },
-    { sort: [['provider', 1], ['model', 1]] }
+    { sort: { provider: 1, model: 1 } }
   );
   
   const performances: ModelPerformance[] = docs.map(doc => {
@@ -104,10 +104,10 @@ export async function fetchModelPerformanceJsonic(runId?: string): Promise<Model
 }
 
 export async function fetchTestResultsJsonic(runId: string): Promise<TestResult[]> {
-  // Use MongoDB-like query with filtering, sorting, and limit
+  // Use MongoDB-like query with filtering, sorting, and limit (v3.3 format)
   const docs = await jsonicService.findDocuments(
     { _type: 'test_result', _runId: runId },
-    { sort: [['timestamp', -1]], limit: 500 }
+    { sort: { timestamp: -1 }, limit: 500 }
   );
   
   const tests: TestResult[] = docs.map(doc => {
@@ -124,13 +124,13 @@ export async function fetchPerformanceTrendsJsonic(): Promise<PerformanceTrend[]
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   const isoDate = sevenDaysAgo.toISOString();
   
-  // Use MongoDB-like query with $gte operator for date comparison
+  // Use MongoDB-like query with $gte operator for date comparison (v3.3 format)
   const docs = await jsonicService.findDocuments(
-    { 
+    {
       _type: 'performance_trend',
       recorded_at: { $gte: isoDate }
     },
-    { sort: [['recorded_at', -1]], limit: 100 }
+    { sort: { recorded_at: -1 }, limit: 100 }
   );
   
   const trends: PerformanceTrend[] = docs.map(doc => {
