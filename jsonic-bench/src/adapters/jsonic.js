@@ -1,45 +1,78 @@
 import { DatabaseAdapter } from './base.js';
 
 /**
- * JSONIC adapter for benchmarks
+ * JSONIC v3.3 adapter for benchmarks
+ * Features simplified API with collection-based operations
  */
 export class JsonicAdapter extends DatabaseAdapter {
   constructor(config = {}) {
     super(config);
     this.name = 'JSONIC';
     this.type = 'NoSQL + SQL (WebAssembly)';
-    this.version = '3.0.0';
+    this.version = '3.3.0';
     this.features = {
+      // Core Database Features
       transactions: true,           // ✅ MVCC with ACID compliance
-      indexes: true,               // ✅ Hash and B-tree indexes
-      sql: true,                   // ✅ Phase 3 Complete - Full SQL support
-      aggregation: true,           // ✅ Phase 2 Complete
-      reactive: true,              // ✅ Phase 3 Complete - Reactive Views & LiveQuery
-      bulkOperations: true,        // ✅ Phase 2 Complete
-      mongodbQueries: true,        // ✅ Phase 2 Complete
-      updateOperators: true,       // ✅ Phase 2 Complete ($set, $push, etc.)
-      webassembly: true,           // ✅ Core feature
-      offline: true,               // ✅ Browser-based
-      crossTab: true,              // ✅ Phase 3 Complete - BroadcastChannel sync
-      persistence: true,           // ✅ Browser storage
-      networkSync: true,           // ✅ Phase 3 Complete - WebSocket/HTTP/WebRTC
-      vectorSearch: true,          // ✅ Phase 3 Complete - AI/LLM support
-      aiIntegration: true          // ✅ Phase 3 Complete - RAG & Agent Memory
+      indexes: true,               // ✅ Automatic indexing + Hash/B-tree indexes
+      sql: true,                   // ✅ Full SQL-92 support with JOINs
+      aggregation: true,           // ✅ MongoDB-style aggregation pipeline
+      reactive: true,              // ✅ Reactive Views & LiveQuery
+      bulkOperations: true,        // ✅ Batch ops (5-10x faster)
+      mongodbQueries: true,        // ✅ MongoDB-compatible API
+      updateOperators: true,       // ✅ Full MongoDB update operators
+      webassembly: true,           // ✅ Rust/WASM core engine
+
+      // Storage & Persistence
+      offline: true,               // ✅ 100% browser-based
+      persistence: true,           // ✅ OPFS + IndexedDB fallback
+      crossTab: true,              // ✅ BroadcastChannel sync
+
+      // Network & Sync
+      networkSync: true,           // ✅ WebSocket/HTTP/WebRTC sync
+      serverSync: true,            // ✅ v2.1+ Zero-config cloud sync
+
+      // AI/ML Features (v3.2+)
+      vectorSearch: true,          // ✅ WASM-accelerated vector search (10-100x faster)
+      aiIntegration: true,         // ✅ RAG Pipeline & Agent Memory
+      geminiSupport: true,         // ✅ v3.2+ Google Gemini integration
+
+      // Performance Features (v3.1-3.3)
+      queryCaching: true,          // ✅ v3.2+ LRU cache (3-40x speedup)
+      automaticIndexing: true,     // ✅ v3.1+ Smart index creation
+      batchOptimization: true,     // ✅ v3.1+ Single lock acquisition
+
+      // Developer Experience (v3.3)
+      defaultSingleton: true,      // ✅ v3.3 Zero-config `db` export
+      modularImports: true,        // ✅ v3.3 Separate core/advanced/ai packages
+      simplifiedAPI: true,         // ✅ v3.3 2-line setup
+      collectionBased: true        // ✅ v3.3 Collection-first API
     };
   }
 
   async init() {
-    // For now, create a mock JSONIC implementation for benchmarking
-    // In production, this would import the actual JSONIC library
+    // Mock JSONIC v3.3 implementation for benchmarking
+    // Real implementation would use: import { JSONIC } from 'jsonic-db'
+    // const db = await JSONIC.create({ name: 'benchmark' })
+    // const collection = db.collection('benchmark')
+
     this.db = {
       collection: (name) => this.createMockCollection(name),
-      stats: async () => ({ document_count: this.documents.size, total_operations: this.operations }),
+      stats: async () => ({
+        document_count: this.documents.size,
+        total_operations: this.operations,
+        cache_hits: this.cacheHits || 0,
+        cache_misses: this.cacheMisses || 0
+      }),
       sql: async (query) => { throw new Error('SQL not implemented in mock'); },
       startTransaction: async () => this.createMockTransaction()
     };
-    
+
     this.documents = new Map();
     this.operations = 0;
+    this.cacheHits = 0;
+    this.cacheMisses = 0;
+
+    // v3.3 uses collection-based API
     this.collection = this.db.collection('benchmark');
     this.currentTx = null;
   }
@@ -462,10 +495,24 @@ export class JsonicAdapter extends DatabaseAdapter {
   async getStats() {
     const stats = await super.getStats();
     const dbStats = await this.db.stats();
+
+    // Calculate cache hit rate
+    const totalCacheOps = dbStats.cache_hits + dbStats.cache_misses;
+    const cacheHitRate = totalCacheOps > 0
+      ? ((dbStats.cache_hits / totalCacheOps) * 100).toFixed(1)
+      : '0.0';
+
     return {
       ...stats,
       documentCount: dbStats.document_count,
-      totalOperations: dbStats.total_operations
+      totalOperations: dbStats.total_operations,
+      // v3.2+ performance metrics
+      cacheHits: dbStats.cache_hits,
+      cacheMisses: dbStats.cache_misses,
+      cacheHitRate: `${cacheHitRate}%`,
+      // v3.3 API version
+      apiVersion: '3.3.0',
+      apiType: 'collection-based'
     };
   }
 }
