@@ -1,15 +1,15 @@
 import { DatabaseAdapter } from './base.js';
 
 /**
- * JSONIC v3.2 adapter for benchmarks
- * Features simplified API with collection-based operations, Gemini integration, and query caching
+ * JSONIC v3.1.1 adapter for benchmarks
+ * Features simplified API with collection-based operations and performance optimizations
  */
 export class JsonicAdapter extends DatabaseAdapter {
   constructor(config = {}) {
     super(config);
     this.name = 'JSONIC';
     this.type = 'NoSQL + SQL (WebAssembly)';
-    this.version = '3.2.0';
+    this.version = '3.1.1';
     this.features = {
       // Core Database Features
       transactions: true,           // ✅ MVCC with ACID compliance
@@ -31,29 +31,29 @@ export class JsonicAdapter extends DatabaseAdapter {
       networkSync: true,           // ✅ WebSocket/HTTP/WebRTC sync
       serverSync: true,            // ✅ v2.1+ Zero-config cloud sync
 
-      // AI/ML Features (v3.2+)
-      vectorSearch: true,          // ✅ WASM-accelerated vector search (10-100x faster)
+      // AI/ML Features (v3.0+)
+      vectorSearch: true,          // ✅ Vector search with embeddings
       aiIntegration: true,         // ✅ RAG Pipeline & Agent Memory
-      geminiSupport: true,         // ✅ v3.2+ Google Gemini integration
+      geminiSupport: false,        // TODO: Coming in v3.2
 
-      // Performance Features (v3.1-3.2)
-      queryCaching: true,          // ✅ v3.2+ LRU cache (3-40x speedup)
+      // Performance Features (v3.1+)
+      queryCaching: false,         // TODO: Coming in v3.2
       automaticIndexing: true,     // ✅ v3.1+ Smart index creation
-      batchOptimization: true,     // ✅ v3.1+ Single lock acquisition
+      batchOptimization: true,     // ✅ v3.1+ Single lock acquisition (5-10x faster)
 
-      // Developer Experience (v3.2)
-      defaultSingleton: true,      // ✅ v3.2 Zero-config `db` export
-      modularImports: true,        // ✅ v3.2 Separate core/advanced/ai packages
-      simplifiedAPI: true,         // ✅ v3.2 2-line setup
-      collectionBased: true        // ✅ v3.2 Collection-first API
+      // Developer Experience (v3.1+)
+      defaultSingleton: false,     // TODO: Coming in v3.2
+      modularImports: false,       // TODO: Coming in v3.2
+      simplifiedAPI: true,         // ✅ v3.1+ Collection-based API
+      collectionBased: true        // ✅ v3.1+ Collection-first API
     };
   }
 
   async init() {
-    // Mock JSONIC v3.2 implementation for benchmarking
-    // Real implementation would use: import { db } from 'jsonic-db'
+    // Mock JSONIC v3.1.1 implementation for benchmarking
+    // Real implementation would use: import { JSONIC } from 'jsonic-db'
+    // const db = await JSONIC.create({ name: 'benchmark' })
     // const collection = db.collection('benchmark')
-    // Or: const db = await JSONIC.create({ name: 'benchmark' })
 
     this.db = {
       collection: (name) => this.createMockCollection(name),
@@ -72,7 +72,7 @@ export class JsonicAdapter extends DatabaseAdapter {
     this.cacheHits = 0;
     this.cacheMisses = 0;
 
-    // v3.2 uses collection-based API
+    // v3.1+ uses collection-based API
     this.collection = this.db.collection('benchmark');
     this.currentTx = null;
   }
@@ -506,12 +506,12 @@ export class JsonicAdapter extends DatabaseAdapter {
       ...stats,
       documentCount: dbStats.document_count,
       totalOperations: dbStats.total_operations,
-      // v3.2+ performance metrics
+      // v3.1+ performance metrics
       cacheHits: dbStats.cache_hits,
       cacheMisses: dbStats.cache_misses,
       cacheHitRate: `${cacheHitRate}%`,
-      // v3.2 API version
-      apiVersion: '3.2.0',
+      // v3.1.1 API version
+      apiVersion: '3.1.1',
       apiType: 'collection-based'
     };
   }

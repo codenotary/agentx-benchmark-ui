@@ -1,9 +1,9 @@
 {
-  "lastUpdated": "2025-09-21T15:04:57.959Z",
+  "lastUpdated": "2025-10-04T15:58:24.976Z",
   "recordCounts": {
-    "benchmark_runs": 14,
-    "test_results": 531,
-    "model_performance": 76,
-    "performance_trends": 94
+    "benchmark_runs": 13,
+    "test_results": 401,
+    "model_performance": 63,
+    "performance_trends": 69
   }
 }
