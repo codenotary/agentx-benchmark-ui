@@ -126,7 +126,10 @@ export default defineConfig({
     chunkSizeWarningLimit: 600
   },
   worker: {
-    format: 'es'
+    format: 'es',
+    rollupOptions: {
+      external: ['jsonic-db']
+    }
   },
   optimizeDeps: {
     exclude: ['sql.js-httpvfs', 'jsonic.esm.js']
