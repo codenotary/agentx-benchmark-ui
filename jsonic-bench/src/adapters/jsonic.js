@@ -43,7 +43,7 @@ export class JsonicAdapter extends DatabaseAdapter {
       automaticIndexing: true,     // ✅ v3.1+ Smart index creation
       batchOptimization: true,     // ✅ v3.1+ Single lock acquisition (5-10x faster)
       optimizedSerialization: true, // ✅ v3.2.0 50% faster (eliminated double JSON serialization)
-      performanceChampion: true    // ✅ v3.2.0 🏆 1st place across all operations
+      performanceChampion: true,    // ✅ v3.2.0 🏆 1st place across all operations
 
       // Developer Experience (v3.1+)
       defaultSingleton: false,     // TODO: Coming in v3.3
