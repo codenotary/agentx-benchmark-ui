@@ -75,7 +75,7 @@ export class HybridJSONIC {
    */
   private async loadCore(): Promise<void> {
     // Import existing JSONIC implementation
-    const jsonicModule = await import('../../services/jsonicService');
+    const jsonicModule = await import('../services/jsonicService');
     this.db = jsonicModule.jsonicService;
     
     this.loadedFeatures.add('core');
