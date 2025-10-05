@@ -59,7 +59,7 @@ export async function performSimpleMigration(
     });
 
     // Fetch the data
-    const basePath = '/agentx-benchmark-ui/';
+    const basePath = import.meta.env.BASE_URL || '/';
     const response = await fetch(`${basePath}data/database.json`);
     
     if (!response.ok) {

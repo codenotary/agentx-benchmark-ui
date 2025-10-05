@@ -18,6 +18,7 @@ import {
 
 // Import migration utilities - use Web Worker for mobile compatibility
 import { checkAndMigrateWorker } from './workerMigration';
+import { jsonicService } from './jsonicService';
 
 // Track initialization
 let initialized = false;
@@ -32,13 +33,27 @@ export function setMigrationProgressCallback(callback: (progress: any) => void) 
 
 async function ensureInitialized() {
   if (initialized) return;
-  
+
   // Ensure we only initialize once
   if (!initializationPromise) {
-    // Use Web Worker migration for mobile and desktop compatibility
-    initializationPromise = checkAndMigrateWorker(migrationProgressCallback);
+    initializationPromise = (async () => {
+      // Check if we already have data (from main thread migration)
+      try {
+        await jsonicService.initialize();
+        const stats = await jsonicService.getStats();
+        if (stats && stats.documentCount > 0) {
+          console.log(`[API-JSONIC] Database already initialized with ${stats.documentCount} documents, skipping worker migration`);
+          return true;
+        }
+      } catch (error) {
+        console.warn('[API-JSONIC] Failed to check existing data:', error);
+      }
+
+      // No data exists, use worker migration
+      return checkAndMigrateWorker(migrationProgressCallback);
+    })();
   }
-  
+
   const success = await initializationPromise;
   if (success) {
     initialized = true;

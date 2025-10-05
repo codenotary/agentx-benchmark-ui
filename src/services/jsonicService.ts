@@ -87,60 +87,39 @@ class JsonicService {
     });
 
     try {
-      // Try to load JSONIC v3.3 from the npm package
-      // Falls back to legacy wrappers if not available
-      try {
-        console.log('[JSONIC] Attempting to load jsonic-db from npm package...');
-        const { JSONIC: JSONICModule } = await import('jsonic-db');
+      // Load JSONIC v3.3 using legacy wrapper implementation
+      const baseUrl = import.meta.env.BASE_URL || '/';
+      const isWorker = typeof window === 'undefined' && typeof self !== 'undefined';
 
-        // Create database using v3.3 API
-        const dbCreateStartTime = performance.now();
-        this.db = await JSONICModule.create({
-          name: 'agentx_benchmark',
-          persistence: false, // Disabled for faster development
-          crossTabSync: false
-        });
-        console.log(`[JSONIC] Database created in ${(performance.now() - dbCreateStartTime).toFixed(2)}ms`);
-
-        // Get default collection for benchmarks
-        this.collection = this.db.collection('benchmarks');
-
-        console.log('[JSONIC v3.3] Initialized successfully with new API');
-
-      } catch (npmError) {
-        console.warn('[JSONIC] npm package not available, falling back to legacy wrapper:', npmError);
-
-        // Fallback to legacy wrapper implementation
-        const baseUrl = import.meta.env.BASE_URL || '/';
-        const isWorker = typeof window === 'undefined' && typeof self !== 'undefined';
-
-        let jsonicUrl: string;
-        if (isWorker) {
-          jsonicUrl = `${baseUrl}jsonic-worker-wrapper.js`;
-        } else {
-          jsonicUrl = import.meta.env.DEV
-            ? `${self.location ? self.location.origin : 'http://localhost:5173'}/jsonic-hybrid/index.js`
-            : `${baseUrl}jsonic-hybrid/index.js`;
-        }
-
-        console.log('[JSONIC] Loading legacy wrapper from:', jsonicUrl);
-
-        const module = await import(/* @vite-ignore */ jsonicUrl) as { default: JSONIC };
-        this.jsonicModule = module.default;
-
-        if (!this.jsonicModule) {
-          throw new Error('JSONIC module not found');
-        }
-
-        const dbCreateStartTime = performance.now();
-        this.db = await this.jsonicModule.create({
-          name: 'agentx_benchmark',
-          persistence: false
-        });
-        console.log(`[JSONIC] Legacy database created in ${(performance.now() - dbCreateStartTime).toFixed(2)}ms`);
-
-        this.collection = this.db.collection('benchmarks');
+      let jsonicUrl: string;
+      if (isWorker) {
+        jsonicUrl = `${baseUrl}jsonic-worker-wrapper.js`;
+      } else {
+        jsonicUrl = import.meta.env.DEV
+          ? `${self.location ? self.location.origin : 'http://localhost:5173'}/jsonic-wrapper-v3.esm.js`
+          : `${baseUrl}jsonic-wrapper-v3.esm.js`;
       }
+
+      console.log('[JSONIC] Loading wrapper from:', jsonicUrl);
+
+      const module = await import(/* @vite-ignore */ jsonicUrl) as { default: any };
+      const JSONICModule = module.default;
+
+      if (!JSONICModule) {
+        throw new Error('JSONIC module not found');
+      }
+
+      const dbCreateStartTime = performance.now();
+      // v3 wrapper uses createDatabase instead of create
+      this.db = await JSONICModule.createDatabase({
+        name: 'agentx_benchmark',
+        persistence: false,
+        enablePersistence: false
+      });
+      console.log(`[JSONIC] Database created in ${(performance.now() - dbCreateStartTime).toFixed(2)}ms`);
+
+      // v3 wrapper doesn't use collections - direct database API
+      console.log('[JSONIC v3.3] Initialized successfully');
 
       const totalInitTime = performance.now() - initStartTime;
       console.log(`[JSONIC] Total initialization time: ${totalInitTime.toFixed(2)}ms`);
@@ -169,22 +148,18 @@ class JsonicService {
   }
 
   async getCollection(): Promise<JsonicCollection> {
-    if (!this.collection) {
-      await this.initialize();
-    }
-
-    if (!this.collection) {
-      throw new Error('JSONIC collection not initialized');
-    }
-
-    return this.collection;
+    // v3 wrapper uses direct DB API, not collections
+    // Return a wrapper that implements the collection interface
+    const db = await this.getDatabase();
+    return db as unknown as JsonicCollection;
   }
 
   // Legacy compatibility methods - converted to collection API
   async insert(data: any): Promise<string> {
-    const coll = await this.getCollection();
-    const result = await coll.insertOne(data);
-    return result._id;
+    const db = await this.getDatabase();
+    // v3 wrapper uses insert() which returns the ID directly
+    const id = await (db as any).insert(data);
+    return id;
   }
 
   async get(id: string): Promise<any> {
@@ -209,8 +184,7 @@ class JsonicService {
   }
 
   async getStats(): Promise<any> {
-    const coll = await this.getCollection();
-    const count = await coll.count();
+    const count = await this.count();
     return {
       documentCount: count,
       collectionName: 'benchmarks'
@@ -225,25 +199,29 @@ class JsonicService {
 
   // Collection-based query methods (v3.3 API)
   async findDocuments(filter: any, options?: FindOptions): Promise<any[]> {
-    const coll = await this.getCollection();
-    return coll.find(filter, options);
+    const db = await this.getDatabase();
+    // v3 wrapper uses query() for filtering
+    return (db as any).query(filter, options);
   }
 
   async findOne(filter: any): Promise<any> {
-    const coll = await this.getCollection();
-    return coll.findOne(filter);
+    const db = await this.getDatabase();
+    // v3 wrapper has findOne
+    return (db as any).findOne(filter);
   }
 
   async find(filter: any = {}, options?: FindOptions): Promise<any[]> {
-    const coll = await this.getCollection();
-    return coll.find(filter, options);
+    const db = await this.getDatabase();
+    // v3 wrapper find() returns chainable, need to call toArray() or use query()
+    return (db as any).query(filter, options);
   }
 
   // Batch operations (v3.3 API)
   async insertMany(documents: any[]): Promise<string[]> {
-    const coll = await this.getCollection();
-    const result = await coll.insertMany(documents);
-    return result.insertedIds;
+    const db = await this.getDatabase();
+    // v3 wrapper insertMany returns array of IDs directly
+    const ids = await (db as any).insertMany(documents);
+    return ids;
   }
 
   async updateMany(filter: any, update: any): Promise<UpdateResult> {
@@ -264,8 +242,10 @@ class JsonicService {
 
   // Count documents
   async count(filter: any = {}): Promise<number> {
-    const coll = await this.getCollection();
-    return coll.count(filter);
+    const db = await this.getDatabase();
+    // v3 wrapper doesn't have direct count, use query and get length
+    const results = await (db as any).query(filter);
+    return results.length;
   }
 
   // Helper method for benchmark statistics using aggregation
