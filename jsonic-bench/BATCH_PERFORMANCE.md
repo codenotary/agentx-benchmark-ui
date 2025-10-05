@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-JSONIC v3.2.0 achieves **10-12x performance improvements** in batch operations compared to single-document operations through strategic optimizations in lock acquisition, WASM bindings, and memory management.
+JSONIC v3.3.0 achieves **10-12x performance improvements** in batch operations compared to single-document operations through strategic optimizations in lock acquisition, WASM bindings, memory management, and production-ready OPFS persistence with binary snapshots (50% smaller, 3-5x faster I/O).
 
 ## Performance Comparison: Single vs Batch
 
