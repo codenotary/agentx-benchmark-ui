@@ -10,6 +10,7 @@ const copyJsonicPlugin = () => ({
     // Copy essential JSONIC files
     const filesToCopy = [
       { src: 'public/jsonic-wrapper.esm.js', dest: 'dist/jsonic-wrapper.esm.js' },
+      { src: 'public/jsonic-wrapper-v3.esm.js', dest: 'dist/jsonic-wrapper-v3.esm.js' },
       { src: 'public/jsonic_wasm.js', dest: 'dist/jsonic_wasm.js' },
       { src: 'public/jsonic_wasm_bg.wasm', dest: 'dist/jsonic_wasm_bg.wasm' },
       { src: 'public/test-jsonic.html', dest: 'dist/test-jsonic.html' },
