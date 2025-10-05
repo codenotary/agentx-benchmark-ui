@@ -201,7 +201,23 @@ class JsonicService {
   async findDocuments(filter: any, options?: FindOptions): Promise<any[]> {
     const db = await this.getDatabase();
     // v3 wrapper uses query() for filtering
-    return (db as any).query(filter, options);
+    console.log('[JSONIC-SERVICE] findDocuments called with filter:', filter, 'options:', options);
+
+    // Debug: Check what's actually in the database
+    const allIds = await (db as any).list();
+    console.log('[JSONIC-SERVICE] Total IDs in database:', allIds.length);
+    if (allIds.length > 0) {
+      const firstDoc = await (db as any).get(allIds[0]);
+      console.log('[JSONIC-SERVICE] First document from DB:', firstDoc);
+      console.log('[JSONIC-SERVICE] First document keys:', firstDoc ? Object.keys(firstDoc) : 'null');
+    }
+
+    const results = await (db as any).query(filter, options);
+    console.log('[JSONIC-SERVICE] findDocuments returned:', results.length, 'documents');
+    if (results.length > 0) {
+      console.log('[JSONIC-SERVICE] First result:', results[0]);
+    }
+    return results;
   }
 
   async findOne(filter: any): Promise<any> {
