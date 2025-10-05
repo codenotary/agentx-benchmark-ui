@@ -1,6 +1,6 @@
 # JSONIC Performance Benchmark Suite
 
-A comprehensive benchmark suite comparing JSONIC v3.2.0 with popular browser-based storage solutions, with **special focus on batch operations** where JSONIC excels.
+A comprehensive benchmark suite comparing JSONIC v3.3.0 with popular browser-based storage solutions, with **special focus on batch operations and OPFS persistence** where JSONIC excels.
 
 ## 📊 Overview
 
