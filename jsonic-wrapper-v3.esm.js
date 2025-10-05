@@ -524,7 +524,7 @@ class JsonicDatabase {
 
     async get(id) {
         const queryId = this.profiler.startQuery('get', { id });
-        
+
         try {
             // Check cache first
             const cacheKey = `get_${id}`;
@@ -533,19 +533,30 @@ class JsonicDatabase {
                 this.profiler.endQuery(queryId, cached.value);
                 return cached.value;
             }
-            
+
             const result = await this.db.get(id);
             const parsed = typeof result === 'string' ? JSON.parse(result) : result;
-            
+
             let returnValue = null;
             if (parsed.success) {
-                const data = parsed.data;
+                let data = parsed.data;
+
+                // Convert Map to plain object (WASM returns Maps)
+                if (data instanceof Map) {
+                    data = Object.fromEntries(data);
+                }
+
                 returnValue = data?.content || data;
+
+                // Also convert nested content if it's a Map
+                if (returnValue instanceof Map) {
+                    returnValue = Object.fromEntries(returnValue);
+                }
             }
-            
+
             // Cache the result
             this.queryCache.set(cacheKey, returnValue);
-            
+
             this.profiler.endQuery(queryId, returnValue);
             return returnValue;
         } catch (error) {
@@ -722,8 +733,14 @@ class JsonicDatabase {
     applyQueryOptions(results, options) {
         // Apply sorting
         if (options.sort) {
+            // Convert MongoDB-style sort {field: 1} to array format [['field', 1]]
+            let sortArray = options.sort;
+            if (!Array.isArray(options.sort)) {
+                sortArray = Object.entries(options.sort);
+            }
+
             results.sort((a, b) => {
-                for (const [key, order] of options.sort) {
+                for (const [key, order] of sortArray) {
                     const diff = (a[key] < b[key] ? -1 : a[key] > b[key] ? 1 : 0);
                     if (diff !== 0) return diff * order;
                 }
