@@ -1,9 +1,11 @@
 import { DatabaseAdapter } from './base.js';
 
 /**
- * JSONIC v3.3.0 adapter for benchmarks - REAL WASM IMPLEMENTATION ONLY
+ * JSONIC v3.3.1 adapter for benchmarks - REAL WASM IMPLEMENTATION ONLY
  * Production-Ready OPFS Persistence + Performance Champion
  * 1st place across all operations with 50% smaller snapshots
+ *
+ * v3.3.1: Added delete_by_query() for MongoDB-style query-based deletion
  *
  * This adapter uses ONLY the actual JSONIC WASM module (jsonic_wasm_bg.wasm)
  * for real performance benchmarking. No mock data, no fallbacks.
@@ -14,7 +16,7 @@ export class JsonicAdapter extends DatabaseAdapter {
     super(config);
     this.name = 'JSONIC';
     this.type = 'NoSQL + SQL (WebAssembly)';
-    this.version = '3.3.0';
+    this.version = '3.3.1';
     this.features = {
       // Core Database Features
       transactions: true,           // ✅ MVCC with ACID compliance
@@ -55,7 +57,7 @@ export class JsonicAdapter extends DatabaseAdapter {
   }
 
   async init() {
-    // Load real JSONIC v3.3.0 WASM module - NO FALLBACK
+    // Load real JSONIC v3.3.1 WASM module - NO FALLBACK
     // Dynamically import the WASM bindings using base-relative path
     // This works for both dev (/) and production (/agentx-benchmark-ui/)
     const baseUrl = import.meta.url.split('/jsonic-bench/')[0];
@@ -67,7 +69,7 @@ export class JsonicAdapter extends DatabaseAdapter {
     // Create real JSONIC database instance
     this.wasmDb = new wasmModule.JsonDB();
 
-    console.log('✅ JSONIC v3.3.0 WASM module loaded successfully');
+    console.log('✅ JSONIC v3.3.1 WASM module loaded successfully');
 
     // Set up collection API
     this.db = {
@@ -195,23 +197,18 @@ export class JsonicAdapter extends DatabaseAdapter {
         return { deletedCount: 0 };
       },
       deleteMany: async (query) => {
-        // WASM API uses ID-based deletes, need to query first
-        const docs = await self.wasmFindDocuments(query);
-        if (docs.length > 0) {
-          const ids = docs.map(doc => {
-            const id = String(doc._id || doc.id);
-            if (!id || id === 'undefined') {
-              throw new Error(`Document has no valid ID: ${JSON.stringify(doc)}`);
-            }
-            return id;
-          });
+        // v3.3.1: Use new delete_by_query method for MongoDB-style deletion
+        const result = self.wasmDb.delete_by_query(JSON.stringify(query));
+        const deletedCount = typeof result === 'number' ? result : (result?.deleted || 0);
 
-          const result = self.wasmDb.delete_many(JSON.stringify(ids));
-          ids.forEach(id => self.documents.delete(id));
-          self.operations += ids.length;
-          return { deletedCount: ids.length };
+        // Update local document tracking
+        if (deletedCount > 0 && Object.keys(query).length === 0) {
+          // Empty query deleted all documents
+          self.documents.clear();
         }
-        return { deletedCount: 0 };
+
+        self.operations += deletedCount;
+        return { deletedCount };
       },
       countDocuments: async (query) => {
         const result = self.wasmDb.count(JSON.stringify(query || {}));
@@ -566,10 +563,8 @@ export class JsonicAdapter extends DatabaseAdapter {
   }
 
   async clear() {
-    // Use WASM's native clear method instead of deleteMany({})
-    // Empty query {} causes WASM panic "unreachable"
-    this.wasmDb.clear();
-    this.documents.clear();
+    // v3.3.1: deleteMany({}) now works with delete_by_query
+    await this.collection.deleteMany({});
   }
 
   async insert(doc) {
