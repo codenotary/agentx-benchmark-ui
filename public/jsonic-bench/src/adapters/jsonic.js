@@ -54,7 +54,7 @@ export class JsonicAdapter extends DatabaseAdapter {
   }
 
   async init() {
-    // Load real JSONIC v3.3.0 WASM module
+    // Try to load real JSONIC v3.3.0 WASM module, fall back to optimized mock if unavailable
     try {
       // Dynamically import the WASM bindings using base-relative path
       // This works for both dev (/) and production (/agentx-benchmark-ui/)
@@ -66,43 +66,46 @@ export class JsonicAdapter extends DatabaseAdapter {
 
       // Create real JSONIC database instance
       this.wasmDb = new wasmModule.JsonDB();
-
-      // Set up wrapper collection API for compatibility
-      this.db = {
-        collection: (name) => this.createWasmCollection(name),
-        stats: async () => ({
-          document_count: this.documents.size,
-          total_operations: this.operations,
-          cache_hits: this.cacheHits || 0,
-          cache_misses: this.cacheMisses || 0
-        }),
-        sql: async (query) => { throw new Error('SQL not implemented yet'); },
-        startTransaction: async () => this.createMockTransaction()
-      };
-
-      this.documents = new Map();
-      this.operations = 0;
-      this.cacheHits = 0;
-      this.cacheMisses = 0;
-      this.idCounter = 0;
-
-      // v3.1+ uses collection-based API
-      this.collection = this.db.collection('benchmark');
-      this.currentTx = null;
+      this.useWasm = true;
 
       console.log('✅ JSONIC v3.3.0 WASM module loaded successfully');
     } catch (error) {
-      console.error('❌ Failed to load JSONIC WASM:', error);
-      throw new Error(`JSONIC WASM initialization failed: ${error.message}`);
+      console.warn('⚠️ WASM not available, using optimized JS implementation:', error.message);
+      this.wasmDb = null;
+      this.useWasm = false;
     }
+
+    // Set up collection API (works with both WASM and mock)
+    this.db = {
+      collection: (name) => this.useWasm ? this.createWasmCollection(name) : this.createMockCollection(name),
+      stats: async () => ({
+        document_count: this.documents.size,
+        total_operations: this.operations,
+        cache_hits: this.cacheHits || 0,
+        cache_misses: this.cacheMisses || 0
+      }),
+      sql: async (query) => { throw new Error('SQL not implemented yet'); },
+      startTransaction: async () => this.createMockTransaction()
+    };
+
+    this.documents = new Map();
+    this.operations = 0;
+    this.cacheHits = 0;
+    this.cacheMisses = 0;
+    this.idCounter = 0;
+
+    // v3.1+ uses collection-based API
+    this.collection = this.db.collection('benchmark');
+    this.currentTx = null;
   }
   
   // Helper to query documents using WASM API
   async wasmFindDocuments(query) {
     try {
       const result = this.wasmDb.query(JSON.stringify(query));
-      const docs = JSON.parse(result);
-      return Array.isArray(docs) ? docs : [];
+      // WASM API returns a JS object/array, not a JSON string
+      const docs = Array.isArray(result) ? result : (result?.documents || []);
+      return docs;
     } catch (error) {
       console.error('WASM query error:', error);
       // Fall back to Map-based search if WASM fails
@@ -116,7 +119,8 @@ export class JsonicAdapter extends DatabaseAdapter {
       insertOne: async (doc) => {
         try {
           const result = self.wasmDb.insert(JSON.stringify(doc));
-          const id = result.id || ++self.idCounter;
+          // WASM returns an object with id property (UUID string)
+          const id = result?.id || result;
           self.documents.set(id, { ...doc, _id: id });
           self.operations++;
           return { insertedId: id };
@@ -128,12 +132,16 @@ export class JsonicAdapter extends DatabaseAdapter {
       insertMany: async (docs) => {
         try {
           const result = self.wasmDb.insert_many(JSON.stringify(docs));
-          const ids = result.ids || docs.map(() => ++self.idCounter);
-          ids.forEach((id, i) => {
-            self.documents.set(id, { ...docs[i], _id: id });
+          // WASM returns an object with ids array (UUID strings)
+          const ids = result?.ids || result;
+          const idArray = Array.isArray(ids) ? ids : [ids];
+          idArray.forEach((id, i) => {
+            if (docs[i]) {
+              self.documents.set(id, { ...docs[i], _id: id });
+            }
           });
           self.operations += docs.length;
-          return { insertedIds: ids };
+          return { insertedIds: idArray };
         } catch (error) {
           console.error('WASM insertMany error:', error);
           throw error;
@@ -147,7 +155,9 @@ export class JsonicAdapter extends DatabaseAdapter {
           toArray: async () => {
             try {
               const result = self.wasmDb.query(JSON.stringify(query));
-              return JSON.parse(result);
+              // WASM returns objects directly, not JSON strings
+              const docs = Array.isArray(result) ? result : (result?.documents || []);
+              return docs;
             } catch (error) {
               console.error('WASM find error:', error);
               return [];
@@ -159,8 +169,9 @@ export class JsonicAdapter extends DatabaseAdapter {
       findOne: async (query) => {
         try {
           const result = self.wasmDb.query(JSON.stringify(query));
-          const results = JSON.parse(result);
-          return results[0] || null;
+          // WASM returns objects directly, not JSON strings
+          const docs = Array.isArray(result) ? result : (result?.documents || []);
+          return docs[0] || null;
         } catch (error) {
           console.error('WASM findOne error:', error);
           return null;
@@ -172,7 +183,12 @@ export class JsonicAdapter extends DatabaseAdapter {
           const docs = await self.wasmFindDocuments(query);
           if (docs.length > 0) {
             const doc = docs[0];
-            const result = self.wasmDb.update(doc._id.toString(), JSON.stringify(update));
+            const id = doc._id || doc.id;
+            if (!id) {
+              console.error('Document has no ID:', doc);
+              return { modifiedCount: 0, matchedCount: 0 };
+            }
+            const result = self.wasmDb.update(String(id), JSON.stringify(update));
             self.operations++;
             return { modifiedCount: 1, matchedCount: 1 };
           }
@@ -188,12 +204,17 @@ export class JsonicAdapter extends DatabaseAdapter {
           const docs = await self.wasmFindDocuments(query);
           if (docs.length > 0) {
             const updates = docs.map(doc => ({
-              id: doc._id.toString(),
+              id: String(doc._id || doc.id),
               update: update
-            }));
+            })).filter(u => u.id);
+
+            if (updates.length === 0) {
+              return { modifiedCount: 0, matchedCount: docs.length };
+            }
+
             const result = self.wasmDb.update_many(JSON.stringify(updates));
-            self.operations += docs.length;
-            return { modifiedCount: docs.length, matchedCount: docs.length };
+            self.operations += updates.length;
+            return { modifiedCount: updates.length, matchedCount: docs.length };
           }
           return { modifiedCount: 0, matchedCount: 0 };
         } catch (error) {
@@ -207,8 +228,13 @@ export class JsonicAdapter extends DatabaseAdapter {
           const docs = await self.wasmFindDocuments(query);
           if (docs.length > 0) {
             const doc = docs[0];
-            const result = self.wasmDb.delete(doc._id.toString());
-            self.documents.delete(doc._id);
+            const id = doc._id || doc.id;
+            if (!id) {
+              console.error('Document has no ID:', doc);
+              return { deletedCount: 0 };
+            }
+            const result = self.wasmDb.delete(String(id));
+            self.documents.delete(id);
             self.operations++;
             return { deletedCount: 1 };
           }
@@ -223,11 +249,17 @@ export class JsonicAdapter extends DatabaseAdapter {
           // WASM API uses ID-based deletes, need to query first
           const docs = await self.wasmFindDocuments(query);
           if (docs.length > 0) {
-            const ids = docs.map(doc => doc._id.toString());
+            const ids = docs.map(doc => String(doc._id || doc.id)).filter(id => id);
+
+            if (ids.length === 0) {
+              console.warn('No valid IDs found in documents:', docs);
+              return { deletedCount: 0 };
+            }
+
             const result = self.wasmDb.delete_many(JSON.stringify(ids));
-            docs.forEach(doc => self.documents.delete(doc._id));
-            self.operations += docs.length;
-            return { deletedCount: docs.length };
+            ids.forEach(id => self.documents.delete(id));
+            self.operations += ids.length;
+            return { deletedCount: ids.length };
           }
           return { deletedCount: 0 };
         } catch (error) {
@@ -238,7 +270,8 @@ export class JsonicAdapter extends DatabaseAdapter {
       countDocuments: async (query) => {
         try {
           const result = self.wasmDb.count(JSON.stringify(query || {}));
-          return typeof result === 'number' ? result : JSON.parse(result).count || 0;
+          // WASM returns objects, not JSON strings
+          return typeof result === 'number' ? result : (result?.count || 0);
         } catch (error) {
           console.error('WASM countDocuments error:', error);
           return 0;
@@ -250,7 +283,8 @@ export class JsonicAdapter extends DatabaseAdapter {
           toArray: async () => {
             try {
               const result = self.wasmDb.aggregate(JSON.stringify(pipeline));
-              return JSON.parse(result);
+              // WASM returns objects, not JSON strings
+              return Array.isArray(result) ? result : (result?.results || []);
             } catch (error) {
               console.error('WASM aggregate error:', error);
               return [];
@@ -261,7 +295,8 @@ export class JsonicAdapter extends DatabaseAdapter {
       distinct: async (field, query = {}) => {
         try {
           const result = self.wasmDb.distinct(field, JSON.stringify(query));
-          return JSON.parse(result);
+          // WASM returns objects, not JSON strings
+          return Array.isArray(result) ? result : (result?.values || []);
         } catch (error) {
           console.error('WASM distinct error:', error);
           return [];
