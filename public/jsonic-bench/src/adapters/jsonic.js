@@ -114,11 +114,30 @@ export class JsonicAdapter extends DatabaseAdapter {
 
   // Helper to query documents using WASM API (Direct JsValue API - no JSON.stringify)
   async wasmFindDocuments(query) {
-    const result = this.wasmDb.query_direct(query);
-    const unwrapped = this.unwrapResult(result, 'Query');
-    // WASM API returns a JS object/array, not a JSON string
-    const docs = Array.isArray(unwrapped) ? unwrapped : (unwrapped?.documents || unwrapped || []);
-    return docs;
+    try {
+      const result = this.wasmDb.query_direct(query);
+      if (result === undefined || result === null) {
+        throw new Error(`query_direct returned ${result} for query: ${JSON.stringify(query)}`);
+      }
+      const unwrapped = this.unwrapResult(result, 'Query');
+      // WASM API returns JSDocument array: [{id, content, metadata}, ...]
+      const jsDocs = Array.isArray(unwrapped) ? unwrapped : (unwrapped?.documents || unwrapped || []);
+
+      // Extract content field from JSDocument wrappers
+      const docs = jsDocs.map(jsDoc => {
+        if (jsDoc.content) {
+          // JSDocument format: extract content and add _id
+          return { ...jsDoc.content, _id: jsDoc.id };
+        }
+        // Legacy format: already a plain document
+        return jsDoc;
+      });
+
+      return docs;
+    } catch (error) {
+      console.error('wasmFindDocuments error:', error.message, 'query:', query);
+      throw error;
+    }
   }
 
   // Clear query cache (for benchmarking)
@@ -161,7 +180,16 @@ export class JsonicAdapter extends DatabaseAdapter {
             // v3.3.2: Direct JsValue API - no JSON.stringify (2-3x faster)
             const result = self.wasmDb.query_direct(query);
             const unwrapped = self.unwrapResult(result, 'Find');
-            const docs = Array.isArray(unwrapped) ? unwrapped : (unwrapped?.documents || unwrapped || []);
+            const jsDocs = Array.isArray(unwrapped) ? unwrapped : (unwrapped?.documents || unwrapped || []);
+
+            // Extract content field from JSDocument wrappers
+            const docs = jsDocs.map(jsDoc => {
+              if (jsDoc.content) {
+                return { ...jsDoc.content, _id: jsDoc.id };
+              }
+              return jsDoc;
+            });
+
             return docs;
           }
         };
@@ -171,8 +199,17 @@ export class JsonicAdapter extends DatabaseAdapter {
         // v3.3.2: Direct JsValue API - no JSON.stringify (2-3x faster)
         const result = self.wasmDb.query_direct(query);
         const unwrapped = self.unwrapResult(result, 'FindOne');
-        const docs = Array.isArray(unwrapped) ? unwrapped : (unwrapped?.documents || unwrapped || []);
-        return docs[0] || null;
+        const jsDocs = Array.isArray(unwrapped) ? unwrapped : (unwrapped?.documents || unwrapped || []);
+
+        // Extract content field from JSDocument wrapper
+        if (jsDocs.length > 0) {
+          const jsDoc = jsDocs[0];
+          if (jsDoc.content) {
+            return { ...jsDoc.content, _id: jsDoc.id };
+          }
+          return jsDoc;
+        }
+        return null;
       },
       updateOne: async (query, update) => {
         // WASM API uses ID-based updates, need to query first
