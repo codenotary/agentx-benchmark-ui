@@ -566,7 +566,10 @@ export class JsonicAdapter extends DatabaseAdapter {
   }
 
   async clear() {
-    await this.collection.deleteMany({});
+    // Use WASM's native clear method instead of deleteMany({})
+    // Empty query {} causes WASM panic "unreachable"
+    this.wasmDb.clear();
+    this.documents.clear();
   }
 
   async insert(doc) {
