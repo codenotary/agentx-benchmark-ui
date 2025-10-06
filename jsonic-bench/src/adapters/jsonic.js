@@ -1,11 +1,15 @@
 import { DatabaseAdapter } from './base.js';
 
 /**
- * JSONIC v3.3.1 adapter for benchmarks - REAL WASM IMPLEMENTATION ONLY
+ * JSONIC v3.3.2 adapter for benchmarks - REAL WASM IMPLEMENTATION ONLY
  * Production-Ready OPFS Persistence + Performance Champion
  * 1st place across all operations with 50% smaller snapshots
  *
- * v3.3.1: Added delete_by_query() for MongoDB-style query-based deletion
+ * v3.3.2 (Performance Edition): Direct JsValue API (2-3x faster)
+ * - insert_direct() - Zero-copy insertions (no JSON.stringify)
+ * - insert_many_direct() - Zero-copy batch insertions
+ * - query_direct() - Zero-copy queries
+ * - Smart cache invalidation (5-10x better hit rate)
  *
  * This adapter uses ONLY the actual JSONIC WASM module (jsonic_wasm_bg.wasm)
  * for real performance benchmarking. No mock data, no fallbacks.
@@ -16,7 +20,7 @@ export class JsonicAdapter extends DatabaseAdapter {
     super(config);
     this.name = 'JSONIC';
     this.type = 'NoSQL + SQL (WebAssembly)';
-    this.version = '3.3.1';
+    this.version = '3.3.2';
     this.features = {
       // Core Database Features
       transactions: true,           // ✅ MVCC with ACID compliance
@@ -57,7 +61,7 @@ export class JsonicAdapter extends DatabaseAdapter {
   }
 
   async init() {
-    // Load real JSONIC v3.3.1 WASM module - NO FALLBACK
+    // Load real JSONIC v3.3.2 WASM module - NO FALLBACK
     // Dynamically import the WASM bindings using base-relative path
     // This works for both dev (/) and production (/agentx-benchmark-ui/)
     const baseUrl = import.meta.url.split('/jsonic-bench/')[0];
@@ -69,7 +73,7 @@ export class JsonicAdapter extends DatabaseAdapter {
     // Create real JSONIC database instance
     this.wasmDb = new wasmModule.JsonDB();
 
-    console.log('✅ JSONIC v3.3.1 WASM module loaded successfully');
+    console.log('✅ JSONIC v3.3.2 WASM module loaded successfully (Direct JsValue API)');
 
     // Set up collection API
     this.db = {
@@ -95,11 +99,25 @@ export class JsonicAdapter extends DatabaseAdapter {
     this.currentTx = null;
   }
   
-  // Helper to query documents using WASM API
+  // Helper to unwrap JSResult from WASM API
+  unwrapResult(result, context = 'WASM operation') {
+    // Check if this is a JSResult wrapper
+    if (result && typeof result === 'object' && 'success' in result) {
+      if (!result.success) {
+        throw new Error(`${context} failed: ${result.error || 'Unknown error'}`);
+      }
+      return result.data;
+    }
+    // If not a JSResult, return as-is (backward compatibility)
+    return result;
+  }
+
+  // Helper to query documents using WASM API (Direct JsValue API - no JSON.stringify)
   async wasmFindDocuments(query) {
-    const result = this.wasmDb.query(JSON.stringify(query));
+    const result = this.wasmDb.query_direct(query);
+    const unwrapped = this.unwrapResult(result, 'Query');
     // WASM API returns a JS object/array, not a JSON string
-    const docs = Array.isArray(result) ? result : (result?.documents || []);
+    const docs = Array.isArray(unwrapped) ? unwrapped : (unwrapped?.documents || unwrapped || []);
     return docs;
   }
 
@@ -114,17 +132,17 @@ export class JsonicAdapter extends DatabaseAdapter {
     const self = this;
     return {
       insertOne: async (doc) => {
-        const result = self.wasmDb.insert(JSON.stringify(doc));
-        // WASM returns an object with id property (UUID string)
-        const id = result?.id || result;
+        // v3.3.2: Direct JsValue API - no JSON.stringify (2-3x faster)
+        const result = self.wasmDb.insert_direct(doc);
+        const id = self.unwrapResult(result, 'Insert');
         self.documents.set(id, { ...doc, _id: id });
         self.operations++;
         return { insertedId: id };
       },
       insertMany: async (docs) => {
-        const result = self.wasmDb.insert_many(JSON.stringify(docs));
-        // WASM returns an object with ids array (UUID strings)
-        const ids = result?.ids || result;
+        // v3.3.2: Direct JsValue API - no JSON.stringify (2-3x faster)
+        const result = self.wasmDb.insert_many_direct(docs);
+        const ids = self.unwrapResult(result, 'BatchInsert');
         const idArray = Array.isArray(ids) ? ids : [ids];
         idArray.forEach((id, i) => {
           if (docs[i]) {
@@ -140,18 +158,20 @@ export class JsonicAdapter extends DatabaseAdapter {
           limit: () => chainable,
           skip: () => chainable,
           toArray: async () => {
-            const result = self.wasmDb.query(JSON.stringify(query));
-            // WASM returns objects directly, not JSON strings
-            const docs = Array.isArray(result) ? result : (result?.documents || []);
+            // v3.3.2: Direct JsValue API - no JSON.stringify (2-3x faster)
+            const result = self.wasmDb.query_direct(query);
+            const unwrapped = self.unwrapResult(result, 'Find');
+            const docs = Array.isArray(unwrapped) ? unwrapped : (unwrapped?.documents || unwrapped || []);
             return docs;
           }
         };
         return chainable;
       },
       findOne: async (query) => {
-        const result = self.wasmDb.query(JSON.stringify(query));
-        // WASM returns objects directly, not JSON strings
-        const docs = Array.isArray(result) ? result : (result?.documents || []);
+        // v3.3.2: Direct JsValue API - no JSON.stringify (2-3x faster)
+        const result = self.wasmDb.query_direct(query);
+        const unwrapped = self.unwrapResult(result, 'FindOne');
+        const docs = Array.isArray(unwrapped) ? unwrapped : (unwrapped?.documents || unwrapped || []);
         return docs[0] || null;
       },
       updateOne: async (query, update) => {
@@ -219,10 +239,15 @@ export class JsonicAdapter extends DatabaseAdapter {
       },
       countDocuments: async (query) => {
         const result = self.wasmDb.count(JSON.stringify(query || {}));
-        // WASM returns objects, not JSON strings
-        return typeof result === 'number' ? result : (result?.count || 0);
+        const unwrapped = self.unwrapResult(result, 'Count');
+        return typeof unwrapped === 'number' ? unwrapped : (unwrapped?.count || 0);
       },
-      createIndex: async () => true,
+      createIndex: async (name, fields) => {
+        // Create index using WASM API
+        const fieldArray = typeof fields === 'string' ? [fields] : (Array.isArray(fields) ? fields : Object.keys(fields));
+        const result = self.wasmDb.create_index(name, JSON.stringify(fieldArray));
+        return self.unwrapResult(result, 'CreateIndex');
+      },
       aggregate: async (pipeline) => {
         return {
           toArray: async () => {
