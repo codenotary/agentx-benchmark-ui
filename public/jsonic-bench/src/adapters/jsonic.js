@@ -78,21 +78,22 @@ export class JsonicAdapter extends DatabaseAdapter {
     // Set up collection API
     this.db = {
       collection: (name) => this.createWasmCollection(name),
-      stats: async () => ({
-        document_count: this.documents.size,
-        total_operations: this.operations,
-        cache_hits: this.cacheHits || 0,
-        cache_misses: this.cacheMisses || 0
-      }),
+      stats: async () => {
+        // Get stats from WASM module
+        const wasmStats = this.wasmDb.stats();
+        return {
+          document_count: wasmStats.document_count || 0,
+          total_operations: this.operations,
+          cache_hits: wasmStats.cache_hits || 0,
+          cache_misses: wasmStats.cache_misses || 0
+        };
+      },
       sql: async (query) => { throw new Error('SQL not implemented yet'); },
       startTransaction: async () => { throw new Error('Transactions not implemented in WASM adapter yet'); }
     };
 
-    this.documents = new Map();
+    // Note: documents are stored in WASM, no need for redundant JS Map
     this.operations = 0;
-    this.cacheHits = 0;
-    this.cacheMisses = 0;
-    this.idCounter = 0;
 
     // v3.1+ uses collection-based API
     this.collection = this.db.collection('benchmark');
@@ -154,7 +155,7 @@ export class JsonicAdapter extends DatabaseAdapter {
         // v3.3.2: Direct JsValue API - no JSON.stringify (2-3x faster)
         const result = self.wasmDb.insert_direct(doc);
         const id = self.unwrapResult(result, 'Insert');
-        self.documents.set(id, { ...doc, _id: id });
+        // Document stored in WASM - no need for redundant JS Map tracking
         self.operations++;
         return { insertedId: id };
       },
@@ -163,11 +164,7 @@ export class JsonicAdapter extends DatabaseAdapter {
         const result = self.wasmDb.insert_many_direct(docs);
         const ids = self.unwrapResult(result, 'BatchInsert');
         const idArray = Array.isArray(ids) ? ids : [ids];
-        idArray.forEach((id, i) => {
-          if (docs[i]) {
-            self.documents.set(id, { ...docs[i], _id: id });
-          }
-        });
+        // Documents are stored in WASM - no need for redundant JS Map tracking
         self.operations += docs.length;
         return { insertedIds: idArray };
       },
@@ -266,7 +263,7 @@ export class JsonicAdapter extends DatabaseAdapter {
             throw new Error(`Document has no ID: ${JSON.stringify(doc)}`);
           }
           const result = self.wasmDb.delete(String(id));
-          self.documents.delete(id);
+          // Document deleted in WASM - no need to sync JS Map
           self.operations++;
           return { deletedCount: 1 };
         }
@@ -277,11 +274,7 @@ export class JsonicAdapter extends DatabaseAdapter {
         const result = self.wasmDb.delete_by_query(JSON.stringify(query));
         const deletedCount = typeof result === 'number' ? result : (result?.deleted || 0);
 
-        // Update local document tracking
-        if (deletedCount > 0 && Object.keys(query).length === 0) {
-          // Empty query deleted all documents
-          self.documents.clear();
-        }
+        // Documents deleted in WASM - no need to sync JS Map
 
         self.operations += deletedCount;
         return { deletedCount };
