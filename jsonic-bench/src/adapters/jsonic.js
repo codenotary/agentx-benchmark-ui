@@ -56,8 +56,10 @@ export class JsonicAdapter extends DatabaseAdapter {
   async init() {
     // Load real JSONIC v3.3.0 WASM module
     try {
-      // Dynamically import the WASM bindings
-      const wasmModule = await import('/jsonic_wasm.js');
+      // Dynamically import the WASM bindings using base-relative path
+      // This works for both dev (/) and production (/agentx-benchmark-ui/)
+      const baseUrl = import.meta.url.split('/jsonic-bench/')[0];
+      const wasmModule = await import(`${baseUrl}/jsonic_wasm.js`);
 
       // Initialize WASM
       await wasmModule.default();
