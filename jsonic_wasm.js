@@ -136,18 +136,18 @@ function takeObject(idx) {
     dropObject(idx);
     return ret;
 }
-/**
- * Initialize the WASM module
- */
-export function init() {
-    wasm.init();
-}
 
 function passArray8ToWasm0(arg, malloc) {
     const ptr = malloc(arg.length * 1, 1) >>> 0;
     getUint8ArrayMemory0().set(arg, ptr / 1);
     WASM_VECTOR_LEN = arg.length;
     return ptr;
+}
+/**
+ * Initialize the WASM module
+ */
+export function init() {
+    wasm.init();
 }
 
 const JsonDBFinalization = (typeof FinalizationRegistry === 'undefined')
@@ -538,6 +538,53 @@ export class JsonDB {
         try {
             const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
             wasm.jsondb_clear(retptr, this.__wbg_ptr);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+            if (r2) {
+                throw takeObject(r1);
+            }
+            return takeObject(r0);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+    /**
+     * Create a binary snapshot of the database
+     * Returns a Vec<u8> containing all documents serialized with bincode
+     * Format: [document_count: u64][doc1_len: u32][doc1_bytes][doc2_len: u32][doc2_bytes]...
+     * @returns {Uint8Array}
+     */
+    create_snapshot() {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            wasm.jsondb_create_snapshot(retptr, this.__wbg_ptr);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+            var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
+            if (r3) {
+                throw takeObject(r2);
+            }
+            var v1 = getArrayU8FromWasm0(r0, r1).slice();
+            wasm.__wbindgen_export_2(r0, r1 * 1, 1);
+            return v1;
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+    /**
+     * Load database from a binary snapshot
+     * Accepts a Vec<u8> created by create_snapshot()
+     * @param {Uint8Array} snapshot
+     * @returns {any}
+     */
+    load_from_snapshot(snapshot) {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            const ptr0 = passArray8ToWasm0(snapshot, wasm.__wbindgen_export_0);
+            const len0 = WASM_VECTOR_LEN;
+            wasm.jsondb_load_from_snapshot(retptr, this.__wbg_ptr, ptr0, len0);
             var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
             var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
             var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
