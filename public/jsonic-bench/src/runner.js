@@ -227,8 +227,13 @@ export class BenchmarkRunner {
         
         for (let i = 0; i < this.config.iterations + this.config.warmup; i++) {
           try {
+            // Clear query cache before each iteration for accurate benchmarking
+            if (adapter.clearCache) {
+              adapter.clearCache();
+            }
+
             const start = performance.now();
-            
+
             // Run all queries
             for (const query of queries) {
               await adapter.find(query, { limit: 100 });
@@ -637,6 +642,11 @@ export class BenchmarkRunner {
         const times = [];
 
         for (let i = 0; i < this.config.iterations + this.config.warmup; i++) {
+          // Clear query cache before each iteration for accurate benchmarking
+          if (adapter.clearCache) {
+            adapter.clearCache();
+          }
+
           const start = performance.now();
 
           // Execute all complex queries

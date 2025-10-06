@@ -103,6 +103,13 @@ export class JsonicAdapter extends DatabaseAdapter {
     return docs;
   }
 
+  // Clear query cache (for benchmarking)
+  clearCache() {
+    if (this.wasmDb && this.wasmDb.clear_query_cache) {
+      this.wasmDb.clear_query_cache();
+    }
+  }
+
   createWasmCollection(name) {
     const self = this;
     return {
