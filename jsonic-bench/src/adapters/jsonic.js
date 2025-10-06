@@ -183,7 +183,13 @@ export class JsonicAdapter extends DatabaseAdapter {
           if (!id) {
             throw new Error(`Document has no ID: ${JSON.stringify(doc)}`);
           }
-          const result = self.wasmDb.update(String(id), JSON.stringify(update));
+
+          // Apply MongoDB update operators to get full updated document
+          const updatedDoc = { ...doc };
+          self.applyUpdate(updatedDoc, update);
+
+          // WASM update expects full document with 'content' field
+          const result = self.wasmDb.update(String(id), JSON.stringify({ content: updatedDoc }));
           self.operations++;
           return { modifiedCount: 1, matchedCount: 1 };
         }
@@ -198,7 +204,13 @@ export class JsonicAdapter extends DatabaseAdapter {
             if (!id || id === 'undefined') {
               throw new Error(`Document has no valid ID: ${JSON.stringify(doc)}`);
             }
-            return { id, update };
+
+            // Apply MongoDB update operators to get full updated document
+            const updatedDoc = { ...doc };
+            self.applyUpdate(updatedDoc, update);
+
+            // WASM update_many expects {id, content} objects
+            return { id, content: updatedDoc };
           });
 
           const result = self.wasmDb.update_many(JSON.stringify(updates));
