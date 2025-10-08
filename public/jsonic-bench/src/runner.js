@@ -189,10 +189,12 @@ export class BenchmarkRunner {
         console.log(`  Preparing data for ${name}...`);
         await adapter.clear();
         await adapter.bulkInsert(testData.documents);
-        
-        // Create index if supported
+
+        // Create indexes on all queried fields
         if (adapter.features.indexes) {
           await adapter.createIndex('age', 'age');
+          await adapter.createIndex('city', 'city');
+          await adapter.createIndex('status', 'status');
         }
         preparedAdapters.add(name);
       } catch (error) {
