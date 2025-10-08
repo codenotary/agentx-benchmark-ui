@@ -349,6 +349,7 @@ export class JsonDB {
     /**
      * Insert multiple documents directly from JsValue array (zero-copy, faster)
      * This is 2-3x faster than insert_many() as it avoids JSON string serialization
+     * Phase 2 optimizations: reduced string allocations, deferred cache invalidation
      * @param {any} js_array
      * @returns {any}
      */
