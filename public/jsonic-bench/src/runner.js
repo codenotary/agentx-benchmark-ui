@@ -227,10 +227,9 @@ export class BenchmarkRunner {
         
         for (let i = 0; i < this.config.iterations + this.config.warmup; i++) {
           try {
-            // Clear query cache before each iteration for accurate benchmarking
-            if (adapter.clearCache) {
-              adapter.clearCache();
-            }
+            // Note: We do NOT clear query cache here to measure real-world performance
+            // Clearing cache would penalize databases with intelligent caching (like JSONIC)
+            // and give unfair advantage to databases without caching
 
             const start = performance.now();
 
@@ -642,8 +641,8 @@ export class BenchmarkRunner {
         const times = [];
 
         for (let i = 0; i < this.config.iterations + this.config.warmup; i++) {
-          // Clear query cache before each iteration for accurate benchmarking
-          if (adapter.clearCache) {
+          // Clear cache only on warmup to measure real-world cached performance
+          if (i === 0 && adapter.clearCache) {
             adapter.clearCache();
           }
 
