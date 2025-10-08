@@ -72,8 +72,14 @@ export class JsonDB {
   list_ids(): any;
   /**
    * Query documents using MongoDB-style queries with index optimization and caching
+   * Phase 2 & 3: Enhanced with better index hints and optimized execution path
    */
   query(query_json: string): any;
+  /**
+   * Execute multiple queries in a single batch operation (Phase 3 optimization)
+   * This reduces lock acquisition overhead and enables result sharing
+   */
+  query_batch(queries_json: string): any;
   /**
    * Query documents directly from JsValue (zero-copy, faster)
    * This is 2-3x faster than query() as it avoids JSON string serialization
@@ -158,6 +164,7 @@ export interface InitOutput {
   readonly jsondb_clear_query_cache: (a: number, b: number) => void;
   readonly jsondb_list_ids: (a: number, b: number) => void;
   readonly jsondb_query: (a: number, b: number, c: number, d: number) => void;
+  readonly jsondb_query_batch: (a: number, b: number, c: number, d: number) => void;
   readonly jsondb_query_direct: (a: number, b: number, c: number) => void;
   readonly jsondb_query_with_options: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
   readonly jsondb_create_index: (a: number, b: number, c: number, d: number, e: number, f: number) => void;

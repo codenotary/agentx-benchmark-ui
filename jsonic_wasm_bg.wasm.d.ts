@@ -17,6 +17,7 @@ export const jsondb_stats: (a: number, b: number) => void;
 export const jsondb_clear_query_cache: (a: number, b: number) => void;
 export const jsondb_list_ids: (a: number, b: number) => void;
 export const jsondb_query: (a: number, b: number, c: number, d: number) => void;
+export const jsondb_query_batch: (a: number, b: number, c: number, d: number) => void;
 export const jsondb_query_direct: (a: number, b: number, c: number) => void;
 export const jsondb_query_with_options: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
 export const jsondb_create_index: (a: number, b: number, c: number, d: number, e: number, f: number) => void;

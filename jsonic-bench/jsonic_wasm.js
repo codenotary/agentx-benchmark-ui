@@ -541,6 +541,7 @@ export class JsonDB {
     }
     /**
      * Query documents using MongoDB-style queries with index optimization and caching
+     * Phase 2 & 3: Enhanced with better index hints and optimized execution path
      * @param {string} query_json
      * @returns {any}
      */
@@ -550,6 +551,29 @@ export class JsonDB {
             const ptr0 = passStringToWasm0(query_json, wasm.__wbindgen_export_0, wasm.__wbindgen_export_1);
             const len0 = WASM_VECTOR_LEN;
             wasm.jsondb_query(retptr, this.__wbg_ptr, ptr0, len0);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+            if (r2) {
+                throw takeObject(r1);
+            }
+            return takeObject(r0);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+    /**
+     * Execute multiple queries in a single batch operation (Phase 3 optimization)
+     * This reduces lock acquisition overhead and enables result sharing
+     * @param {string} queries_json
+     * @returns {any}
+     */
+    query_batch(queries_json) {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            const ptr0 = passStringToWasm0(queries_json, wasm.__wbindgen_export_0, wasm.__wbindgen_export_1);
+            const len0 = WASM_VECTOR_LEN;
+            wasm.jsondb_query_batch(retptr, this.__wbg_ptr, ptr0, len0);
             var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
             var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
             var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
