@@ -1,0 +1,52 @@
+                    GNU AFFERO GENERAL PUBLIC LICENSE
+                       Version 3, 19 November 2007
+
+ Copyright (C) 2024 JSONIC Contributors
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU Affero General Public License as published
+ by the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU Affero General Public License for more details.
+
+ You should have received a copy of the GNU Affero General Public License
+ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+                     ADDITIONAL TERMS
+
+ The JSONIC WebAssembly JSON Database is licensed under the GNU Affero
+ General Public License v3.0 (AGPL-3.0) with the following clarifications
+ and additional permissions:
+
+ 1. WebAssembly Usage: When JSONIC is compiled to WebAssembly and embedded
+    in a web application, the web application itself is not considered a
+    derivative work merely by virtue of loading and using the JSONIC WASM
+    module, provided that:
+    - The JSONIC WASM module remains unmodified
+    - Proper attribution is maintained
+    - Any modifications to JSONIC itself are shared under AGPL-3.0
+
+ 2. API Usage: Applications that interact with JSONIC solely through its
+    documented JavaScript/TypeScript API are not considered derivative works.
+
+ 3. Network Use: As per AGPL-3.0, if you modify JSONIC and run it on a 
+    server where users interact with it over a network, you must provide
+    access to the source code of your modified version.
+
+ For the full license text, see: https://www.gnu.org/licenses/agpl-3.0.txt
+
+                        ATTRIBUTION NOTICE
+
+ JSONIC - High-performance WebAssembly JSON Database
+ Copyright (C) 2024 JSONIC Contributors
+ 
+ This project includes software developed by the JSONIC Contributors.
+ For a full list of contributors, see the repository at:
+ https://github.com/yourusername/jsonic
+
+ Third-party components used in this project are subject to their own
+ licenses. See the dependencies in Cargo.toml and package.json for details.
