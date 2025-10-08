@@ -20,11 +20,18 @@ export class SQLJSAdapter extends DatabaseAdapter {
   }
 
   async init() {
-    // Load real SQL.js WASM library from CDN
-    const module = await import('https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/sql-wasm.js');
-    // Handle both ESM default export and UMD format
-    const initSqlJs = module.default || module;
-    const SQL = await initSqlJs({
+    // Load real SQL.js WASM library using script tag approach (more reliable for UMD modules)
+    if (!window.initSqlJs) {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/sql-wasm.js';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    }
+
+    const SQL = await window.initSqlJs({
       locateFile: file => `https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/${file}`
     });
 
